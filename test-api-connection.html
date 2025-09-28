@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>API Connection Test</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="testHealth()">Test Health Endpoint</button>
+    <button onclick="testCertifications()">Test Certifications Endpoint</button>
+    <button onclick="testAssessment()">Test AZ-900 Assessment</button>
+    <button onclick="clearResults()">Clear Results</button>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:6000';
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testHealth() {
+            addResult('Testing health endpoint...', 'info');
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                addResult(`Health Check: ${response.status}<br><pre>${JSON.stringify(data, null, 2)}</pre>`, 'success');
+            } catch (error) {
+                addResult(`Health Check Failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCertifications() {
+            addResult('Testing certifications endpoint...', 'info');
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/assessments/certifications`);
+                const data = await response.json();
+                addResult(`Certifications: ${response.status}<br>Found ${data.length} certifications<br><pre>${JSON.stringify(data.slice(0, 3), null, 2)}...</pre>`, 'success');
+            } catch (error) {
+                addResult(`Certifications Failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAssessment() {
+            addResult('Testing AZ-900 assessment endpoint...', 'info');
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/assessments/AZ-900`);
+                const data = await response.json();
+                addResult(`AZ-900 Assessment: ${response.status}<br>Questions: ${data.questions.length}<br>Title: ${data.title}`, 'success');
+            } catch (error) {
+                addResult(`AZ-900 Assessment Failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Run basic test on load
+        window.onload = function() {
+            addResult('API Connection Test Page Loaded', 'info');
+            addResult(`Testing connection to: ${API_BASE_URL}`, 'info');
+        };
+    </script>
+</body>
+</html>
