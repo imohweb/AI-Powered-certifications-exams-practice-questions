@@ -1,0 +1,6 @@
+{
+  "translation": "Frage: Sie müssen die Datenaktualisierung für einen Power BI-Bericht konfigurieren, der eine Verbindung mit einer Azure SQL-Datenbank herstellt. Welche integrierte Funktion sollten Sie verwenden, um sicherzustellen, dass der Bericht automatisch und ohne manuellen Eingriff aktualisiert wird?\n\nOption 1: Power BI-Dataflows\nOption 2: Geplante Power BI-Aktualisierung\nOption 3: Paginierte Power BI-Berichte\nOption 4: Power BI-Arbeitsbereich",
+  "original_text": "Question: You need to configure data refresh for a Power BI report that connects to an Azure SQL Database. Which built-in capability should you use to ensure the report updates automatically without manual intervention?\n\nOption 1: Power BI Dataflows\nOption 2: Power BI Scheduled Refresh\nOption 3: Power BI Paginated Reports\nOption 4: Power BI Workspace",
+  "target_language": "de",
+  "timestamp": "2025-10-02 20:13:30.806305"
+}

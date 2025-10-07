@@ -73,11 +73,23 @@ const AssessmentPage = ({
   const [isReading, setIsReading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('en'); // Language selection
+  const [currentTranscript, setCurrentTranscript] = useState<string>(''); // Current speech transcript from microphone
+  const [showTranscription, setShowTranscription] = useState(true); // Show real-time transcription display (enabled by default)
+  
+  // Progressive transcription state (for real-time text display)
+  const [progressiveText, setProgressiveText] = useState<string>(''); // Text displayed progressively
+  const [fullTranscriptionText, setFullTranscriptionText] = useState<string>(''); // Full text to display
+  const progressiveTimerRef = useRef<NodeJS.Timeout | null>(null); // Timer for progressive display
+  
+  // Translation state (for displaying translated content in UI)
+  const [translatedQuestions, setTranslatedQuestions] = useState<Map<number, string>>(new Map()); // Translated question text by index
+  const [translatedAnswersMap, setTranslatedAnswersMap] = useState<Map<number, string[]>>(new Map()); // Translated answers by question index
   
   // Refs
   const speechSynthesisRef = useRef<SpeechSynthesis | null>(null);
   const recognitionRef = useRef<any>(null);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null); // Track current Azure audio
 
   // Initialize speech synthesis
   useEffect(() => {
@@ -91,18 +103,23 @@ const AssessmentPage = ({
     if (typeof window !== 'undefined' && voiceEnabled) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
-        console.log('🎤 Initializing Speech Recognition...');
+        // Use the selected language for speech recognition
+        const recognitionLang = getRecognitionLanguageCode(selectedLanguage);
+          
+        console.log(`🎤 Initializing Speech Recognition for ${recognitionLang}...`);
         const recognition = new SpeechRecognition();
         
         // Enhanced configuration
         recognition.continuous = true;
         recognition.interimResults = false;
-        recognition.lang = 'en-US';
+        recognition.lang = recognitionLang; // Use dynamic language
         recognition.maxAlternatives = 5;
         
         recognition.onstart = () => {
-          console.log('🎤 Speech recognition started - Say "option 1", "option 2", etc.');
+          const langName = selectedLanguage.toUpperCase();
+          console.log(`🎤 Speech recognition started in ${langName} - Say "option 1", "option 2", etc.`);
           setIsListening(true);
+          setCurrentTranscript(''); // Clear previous transcript
         };
         
         recognition.onresult = (event: any) => {
@@ -113,6 +130,9 @@ const AssessmentPage = ({
           
           console.log('🎤 Primary transcript:', transcript);
           console.log('🎤 Confidence:', confidence);
+          
+          // Update the transcript display
+          setCurrentTranscript(transcript);
           
           // Show alternatives for debugging
           if (result.alternatives && result.alternatives.length > 1) {
@@ -133,6 +153,7 @@ const AssessmentPage = ({
         recognition.onerror = (event: any) => {
           console.error('🎤 Speech recognition error:', event.error, event);
           setIsListening(false);
+          setCurrentTranscript(''); // Clear transcript on error
           
           switch (event.error) {
             case 'not-allowed':
@@ -206,7 +227,7 @@ const AssessmentPage = ({
         }
       }
     };
-  }, [voiceEnabled, onError]);
+  }, [voiceEnabled, selectedLanguage, onError]);
 
   // Load assessment
   useEffect(() => {
@@ -291,6 +312,52 @@ const AssessmentPage = ({
     loadMultilingualVoices();
   }, []);
 
+  // Cleanup audio on component unmount or navigation
+  useEffect(() => {
+    return () => {
+      // Stop any playing audio
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      
+      // Stop browser speech synthesis
+      if (speechSynthesisRef.current) {
+        speechSynthesisRef.current.cancel();
+      }
+      
+      // Stop speech recognition
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          // Ignore errors if already stopped
+        }
+      }
+      
+      console.log('🧹 Audio cleanup completed on unmount');
+    };
+  }, []);
+
+  // Language code mapping for speech recognition
+  const getRecognitionLanguageCode = (languageCode: string): string => {
+    const languageMap: { [key: string]: string } = {
+      'en': 'en-US',
+      'es': 'es-ES',
+      'fr': 'fr-FR',
+      'de': 'de-DE',
+      'it': 'it-IT',
+      'pt': 'pt-PT',
+      'ja': 'ja-JP',
+      'ko': 'ko-KR',
+      'zh': 'zh-CN',
+      'ar': 'ar-SA',
+      'hi': 'hi-IN',
+      'ru': 'ru-RU',
+    };
+    return languageMap[languageCode] || 'en-US';
+  };
+
   // Get current question state
   const getCurrentQuestionState = useCallback((): QuestionState => {
     return questionStates.get(currentQuestionIndex) || {
@@ -332,6 +399,9 @@ const AssessmentPage = ({
       showResults: false,
       isChecked: false
     });
+
+    // Return the selected answer index for voice feedback
+    return currentQuestion.answers.findIndex(answer => answer.id === answerId);
   }, [assessment, currentQuestionIndex, getCurrentQuestionState, updateQuestionState]);
 
   // Fallback to browser speech synthesis
@@ -339,6 +409,15 @@ const AssessmentPage = ({
     console.log('🔊 Using browser speech synthesis as fallback');
     
     if (!speechSynthesisRef.current) return;
+    
+    // Stop any HTML5 audio first
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    
+    // Cancel any ongoing speech synthesis
+    speechSynthesisRef.current.cancel();
     
     const utterance = new SpeechSynthesisUtterance(textToRead);
     utterance.rate = 0.75;
@@ -367,15 +446,83 @@ const AssessmentPage = ({
     speechSynthesisRef.current.speak(utterance);
   }, []);
 
+  // Progressive text display function (word-by-word animation)
+  const startProgressiveTextDisplay = useCallback((fullText: string, durationSeconds: number) => {
+    // Don't display if transcription is disabled
+    if (!showTranscription) {
+      return;
+    }
+    
+    // Clear any existing progressive display
+    if (progressiveTimerRef.current) {
+      clearInterval(progressiveTimerRef.current);
+      progressiveTimerRef.current = null;
+    }
+    
+    setFullTranscriptionText(fullText);
+    setProgressiveText('');
+    
+    // Split text into chunks (words + punctuation)
+    // This regex keeps words together and splits on spaces
+    const chunks: string[] = [];
+    const regex = /\S+\s*/g; // Match non-whitespace followed by optional whitespace
+    let match;
+    
+    while ((match = regex.exec(fullText)) !== null) {
+      chunks.push(match[0]);
+    }
+    
+    if (chunks.length === 0) {
+      setProgressiveText(fullText);
+      return;
+    }
+    
+    // Calculate timing - aim for natural reading pace
+    // Average reading speed is 2-3 words per second for TTS
+    const totalChunks = chunks.length;
+    const msPerChunk = Math.max(150, Math.min(600, (durationSeconds * 1000) / totalChunks));
+    
+    let currentIndex = 0;
+    let displayedText = '';
+    
+    // Display chunks progressively
+    progressiveTimerRef.current = setInterval(() => {
+      if (currentIndex < chunks.length) {
+        displayedText += chunks[currentIndex];
+        setProgressiveText(displayedText);
+        currentIndex++;
+      } else {
+        // All chunks displayed
+        if (progressiveTimerRef.current) {
+          clearInterval(progressiveTimerRef.current);
+          progressiveTimerRef.current = null;
+        }
+      }
+    }, msPerChunk);
+    
+  }, [showTranscription]);
+
+  // Clear progressive text display
+  const clearProgressiveTextDisplay = useCallback(() => {
+    if (progressiveTimerRef.current) {
+      clearInterval(progressiveTimerRef.current);
+      progressiveTimerRef.current = null;
+    }
+    setProgressiveText('');
+    setFullTranscriptionText('');
+  }, []);
+
   // Enhanced multilingual speech using Azure Speech Service
-  const readQuestionWithAzureSpeech = useCallback(async (languageCode: string = selectedLanguage) => {
+  const readQuestionWithAzureSpeech = useCallback(async (languageCode: string = selectedLanguage, questionIndex?: number) => {
     if (!voiceEnabled || !assessment) return;
 
     try {
-      console.log(`🌐 Reading question using Azure Speech Service in ${languageCode}`);
+      // Use provided questionIndex or fallback to currentQuestionIndex
+      const indexToRead = questionIndex !== undefined ? questionIndex : currentQuestionIndex;
+      console.log(`🌐 Reading question ${indexToRead + 1} using Azure Speech Service in ${languageCode}`);
       setIsReading(true);
 
-      const currentQuestion = assessment.questions[currentQuestionIndex];
+      const currentQuestion = assessment.questions[indexToRead];
       if (!currentQuestion) return;
 
       // Extract answer texts
@@ -389,17 +536,57 @@ const AssessmentPage = ({
       );
 
       if (audioResponse?.audio_url) {
+        // Store translated content for UI display if available
+        if (audioResponse.translated_question && audioResponse.translated_answers) {
+          setTranslatedQuestions(prev => {
+            const newMap = new Map(prev);
+            newMap.set(indexToRead, audioResponse.translated_question!);
+            return newMap;
+          });
+          setTranslatedAnswersMap(prev => {
+            const newMap = new Map(prev);
+            newMap.set(indexToRead, audioResponse.translated_answers!);
+            return newMap;
+          });
+        }
+        
+        // Stop any currently playing audio first
+        if (currentAudioRef.current) {
+          currentAudioRef.current.pause();
+          currentAudioRef.current = null;
+        }
+        
+        // Stop browser speech synthesis
+        if (speechSynthesisRef.current) {
+          speechSynthesisRef.current.cancel();
+        }
+
+        // Clear any previous progressive text display BEFORE starting new one
+        clearProgressiveTextDisplay();
+
+        // Start progressive text display if we have translated text
+        if (audioResponse.translated_text) {
+          const duration = audioResponse.duration_seconds || 5; // Default to 5 seconds if not provided
+          startProgressiveTextDisplay(audioResponse.translated_text, duration);
+        }
+
         // Play the generated audio
         const audio = new Audio(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}${audioResponse.audio_url}`);
+        currentAudioRef.current = audio; // Store reference for stopping
         
         audio.onended = () => {
           setIsReading(false);
+          currentAudioRef.current = null;
+          // Clear progressive text after a short delay
+          setTimeout(() => clearProgressiveTextDisplay(), 2000);
           console.log('🔊 Azure Speech playback completed');
         };
         
         audio.onerror = () => {
           console.error('🔊 Azure Speech playback failed, falling back to browser speech');
           setIsReading(false);
+          currentAudioRef.current = null;
+          clearProgressiveTextDisplay();
           fallbackToLocalSpeech(currentQuestion.text);
         };
 
@@ -412,6 +599,8 @@ const AssessmentPage = ({
     } catch (error) {
       console.error('🔊 Azure Speech failed, falling back to browser speech:', error);
       setIsReading(false);
+      currentAudioRef.current = null;
+      clearProgressiveTextDisplay();
       
       // Fallback to browser speech
       const currentQuestion = assessment.questions[currentQuestionIndex];
@@ -419,36 +608,77 @@ const AssessmentPage = ({
         fallbackToLocalSpeech(currentQuestion.text);
       }
     }
-  }, [voiceEnabled, assessment, currentQuestionIndex, selectedLanguage, fallbackToLocalSpeech]);
+  }, [voiceEnabled, assessment, currentQuestionIndex, selectedLanguage, fallbackToLocalSpeech, startProgressiveTextDisplay, clearProgressiveTextDisplay]);
 
-  // Enhanced feedback speech using secondary voice
+    // Enhanced feedback speech using secondary voice
   const readFeedbackWithAzureSpeech = useCallback(async (
     feedbackText: string, 
     isCorrect: boolean = true, 
-    languageCode: string = selectedLanguage
+    languageCode: string = selectedLanguage,
+    pauseListeningFn?: () => void,
+    resumeListeningFn?: () => void,
+    skipPrefix: boolean = false
   ) => {
     if (!voiceEnabled) return;
 
     try {
       console.log(`🔊 Reading feedback with Azure Speech (${isCorrect ? 'correct' : 'incorrect'}) in ${languageCode}`);
 
+      // PAUSE speech recognition to prevent hearing our own voice
+      if (pauseListeningFn) {
+        pauseListeningFn();
+      }
+
+      // Stop any currently playing audio first (including browser speech)
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      
+      // Stop browser speech synthesis
+      if (speechSynthesisRef.current) {
+        speechSynthesisRef.current.cancel();
+      }
+
+      // Clear any previous progressive text display BEFORE starting new one
+      clearProgressiveTextDisplay();
+
       // Generate feedback audio with secondary voice
       const audioResponse = await audioApi.generateFeedbackAudio(
         feedbackText,
         isCorrect,
-        languageCode
+        languageCode,
+        skipPrefix
       );
 
       if (audioResponse?.audio_url) {
+        // Start progressive text display if we have translated text
+        if (audioResponse.translated_text) {
+          const duration = audioResponse.duration_seconds || 3; // Default to 3 seconds for feedback
+          startProgressiveTextDisplay(audioResponse.translated_text, duration);
+        }
+
         // Play the generated audio
         const audio = new Audio(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}${audioResponse.audio_url}`);
+        currentAudioRef.current = audio; // Store reference for stopping
         
         audio.onended = () => {
           console.log('🔊 Azure feedback speech completed');
+          currentAudioRef.current = null;
+          // Clear progressive text after a short delay
+          setTimeout(() => {
+            clearProgressiveTextDisplay();
+            // NOTE: We do NOT auto-resume listening after feedback to prevent loops
+            // User must manually click the mic button to continue giving commands
+            console.log('🎤 Feedback complete. Click mic button to resume voice commands.');
+          }, 2000);
         };
         
         audio.onerror = () => {
           console.error('🔊 Azure feedback speech failed, falling back to browser speech');
+          currentAudioRef.current = null;
+          clearProgressiveTextDisplay();
+          // Do NOT auto-resume on error either
           fallbackToLocalSpeech(feedbackText);
         };
 
@@ -460,9 +690,12 @@ const AssessmentPage = ({
 
     } catch (error) {
       console.error('🔊 Azure feedback speech failed, falling back to browser speech:', error);
+      currentAudioRef.current = null;
+      clearProgressiveTextDisplay();
+      // Do NOT auto-resume on error
       fallbackToLocalSpeech(feedbackText);
     }
-  }, [voiceEnabled, selectedLanguage, fallbackToLocalSpeech]);
+  }, [voiceEnabled, selectedLanguage, fallbackToLocalSpeech, startProgressiveTextDisplay, clearProgressiveTextDisplay]);
 
   // Read question aloud using Azure Speech Service with multilingual support
   const readQuestion = useCallback(async () => {
@@ -472,11 +705,91 @@ const AssessmentPage = ({
 
   // Stop reading
   const stopReading = useCallback(() => {
-    if (speechSynthesisRef.current) {
-      speechSynthesisRef.current.cancel();
-      setIsReading(false);
+    console.log('🛑 stopReading called');
+    
+    // Stop HTML5 Audio element (Azure Speech)
+    if (currentAudioRef.current) {
+      console.log('🛑 Stopping current audio playback');
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        currentAudioRef.current = null;
+      } catch (error) {
+        console.error('Error stopping audio:', error);
+        currentAudioRef.current = null;
+      }
     }
-  }, []);
+    
+    // Stop browser speech synthesis (fallback)
+    if (speechSynthesisRef.current) {
+      console.log('🛑 Cancelling speech synthesis');
+      try {
+        speechSynthesisRef.current.cancel();
+      } catch (error) {
+        console.error('Error cancelling speech synthesis:', error);
+      }
+    }
+    
+    // Also cancel any window.speechSynthesis that might be running
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      console.log('🛑 Cancelling window speech synthesis');
+      window.speechSynthesis.cancel();
+    }
+    
+    // Clear progressive text display
+    clearProgressiveTextDisplay();
+    
+    setIsReading(false);
+    console.log('✅ stopReading completed');
+  }, [clearProgressiveTextDisplay]);
+
+  // Pause speech recognition temporarily (to prevent hearing our own audio feedback)
+  const pauseListening = useCallback(() => {
+    if (recognitionRef.current && isListening) {
+      try {
+        console.log('🎤 Pausing speech recognition to prevent feedback loop');
+        recognitionRef.current.stop();
+        setIsListening(false); // Update UI to show mic is off
+        setCurrentTranscript(''); // Clear any current transcript
+      } catch (error) {
+        console.error('🎤 Failed to pause voice recognition:', error);
+      }
+    }
+  }, [isListening]);
+
+  // Resume speech recognition after audio finishes
+  const resumeListening = useCallback(() => {
+    if (recognitionRef.current && voiceEnabled && !isListening) {
+      try {
+        console.log('🎤 Resuming speech recognition after audio playback');
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('🎤 Failed to resume voice recognition:', error);
+      }
+    }
+  }, [voiceEnabled, isListening]);
+
+  // Handle mouse/click-based answer selection with voice feedback
+  const handleAnswerSelectWithFeedback = useCallback(async (answerId: string) => {
+    const currentQuestion = assessment?.questions[currentQuestionIndex];
+    if (!currentQuestion) return;
+
+    // First, select the answer
+    const selectedIndex = handleAnswerSelect(answerId);
+    
+    // Then provide voice feedback if enabled
+    if (voiceEnabled && selectedIndex !== undefined && selectedIndex >= 0) {
+      const feedbackText = `You selected option ${selectedIndex + 1}. Say "check answer" to verify, or "next question" to continue.`;
+      
+      // Use skipPrefix=true to avoid saying "Correct!" before checking the answer
+      await readFeedbackWithAzureSpeech(feedbackText, true, selectedLanguage, pauseListening, resumeListening, true);
+      
+      // Inform user that they need to restart the mic
+      setTimeout(() => {
+        onSuccess('🎤 Click the microphone button to continue with voice commands');
+      }, 3500); // Show after feedback audio completes
+    }
+  }, [assessment, currentQuestionIndex, handleAnswerSelect, voiceEnabled, selectedLanguage, readFeedbackWithAzureSpeech, pauseListening, resumeListening, onSuccess]);
 
   // Check answer - simple wrapper function
   const checkAnswer = useCallback(async () => {
@@ -485,6 +798,12 @@ const AssessmentPage = ({
     
     if (!currentQuestion || !currentState.isAnswered) {
       onError('Please select an answer first');
+      return;
+    }
+    
+    // Prevent duplicate checking if already checked
+    if (currentState.isChecked) {
+      console.log('Answer already checked, skipping duplicate check');
       return;
     }
     
@@ -503,10 +822,16 @@ const AssessmentPage = ({
     // Provide voice feedback using Azure Speech Service with secondary voice
     if (voiceEnabled) {
       const feedbackText = isCorrect 
-        ? 'Correct! Well done. Say "next question" to continue.' 
-        : 'Incorrect. Please review the explanation. Say "next question" to continue.';
+        ? 'Well done. Say "next question" to continue.' 
+        : 'Please review the explanation. Say "next question" to continue.';
       
-      await readFeedbackWithAzureSpeech(feedbackText, isCorrect, selectedLanguage);
+      // skipPrefix=false (default) will add "Correct!" or "Incorrect." prefix in the backend
+      await readFeedbackWithAzureSpeech(feedbackText, isCorrect, selectedLanguage, pauseListening, resumeListening, false);
+      
+      // Inform user that they need to restart the mic
+      setTimeout(() => {
+        onSuccess('🎤 Click the microphone button to continue with voice commands');
+      }, 3500); // Show after feedback audio completes
     }
     
     const message = isCorrect ? 'Correct answer!' : 'Incorrect answer. Please review the explanation.';
@@ -515,21 +840,50 @@ const AssessmentPage = ({
     } else {
       onError(message);
     }
-  }, [assessment, currentQuestionIndex, getCurrentQuestionState, updateQuestionState, voiceEnabled, onSuccess, onError, readFeedbackWithAzureSpeech, selectedLanguage]);
+  }, [assessment, currentQuestionIndex, getCurrentQuestionState, updateQuestionState, voiceEnabled, onSuccess, onError, readFeedbackWithAzureSpeech, selectedLanguage, pauseListening, resumeListening]);
 
   // Handle voice commands
   const handleVoiceCommand = useCallback(async (transcript: string) => {
     if (!assessment) return;
     
     console.log('Voice command received:', transcript);
-
-    // Stop reading if user interrupts
-    if (isReading) {
-      stopReading();
-    }
     
     // Normalize transcript for better matching
     const normalizedTranscript = transcript.toLowerCase().trim();
+    
+    // Check for "stop reading" command FIRST (before any other command)
+    if (normalizedTranscript.includes('stop reading') || 
+        normalizedTranscript.includes('stop') ||
+        normalizedTranscript.includes('pause') ||
+        normalizedTranscript.includes('quiet')) {
+      stopReading();
+      onSuccess('Stopped reading');
+      return;
+    }
+    
+    // Check for "read question" command
+    if (normalizedTranscript.includes('read question') || 
+        normalizedTranscript.includes('read the question') ||
+        normalizedTranscript.includes('read this question') ||
+        normalizedTranscript.includes('repeat question') ||
+        normalizedTranscript.includes('say question')) {
+      // Stop any current reading before starting new one
+      if (isReading) {
+        stopReading();
+      }
+      await readQuestionWithAzureSpeech(selectedLanguage);
+      return;
+    }
+
+    // Check for "check answer" command BEFORE "next question" to avoid confusion
+    if (normalizedTranscript.includes('check answer') || 
+        normalizedTranscript.includes('check my answer') ||
+        normalizedTranscript.includes('verify answer') ||
+        normalizedTranscript.includes('submit answer')) {
+      // Use the existing checkAnswer function to avoid duplicate logic
+      await checkAnswer();
+      return;
+    }
     
     // Check for "next question" command
     if (normalizedTranscript.includes('next question') || 
@@ -541,20 +895,22 @@ const AssessmentPage = ({
         return;
       }
       
-      if (!currentState.isChecked) {
-        onError('Please check your answer before moving to the next question');
-        return;
-      }
+      // Remove the isChecked requirement - allow skipping answer checking
+      // if (!currentState.isChecked) {
+      //   onError('Please check your answer before moving to the next question');
+      //   return;
+      // }
       
       if (currentQuestionIndex < assessment.questions.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
+        const nextIndex = currentQuestionIndex + 1;
+        setCurrentQuestionIndex(nextIndex);
         onSuccess('Moving to next question');
         
         // Automatically start reading the new question if voice is enabled
         if (voiceEnabled) {
           // Small delay to ensure the component has updated
           setTimeout(async () => {
-            await readQuestionWithAzureSpeech(selectedLanguage);
+            await readQuestionWithAzureSpeech(selectedLanguage, nextIndex); // Pass explicit index
           }, 500);
         }
       } else {
@@ -567,52 +923,18 @@ const AssessmentPage = ({
     if (normalizedTranscript.includes('previous question') || 
         (normalizedTranscript.includes('previous') && normalizedTranscript.includes('question'))) {
       if (currentQuestionIndex > 0) {
-        setCurrentQuestionIndex(prev => prev - 1);
+        const prevIndex = currentQuestionIndex - 1;
+        setCurrentQuestionIndex(prevIndex);
         onSuccess('Moving to previous question');
+        
+        // Automatically start reading the new question if voice is enabled
+        if (voiceEnabled) {
+          setTimeout(async () => {
+            await readQuestionWithAzureSpeech(selectedLanguage, prevIndex); // Pass explicit index
+          }, 500);
+        }
       } else {
         onSuccess('You are on the first question!');
-      }
-      return;
-    }
-
-    // Check for "check answer" command
-    if (normalizedTranscript.includes('check answer') || 
-        normalizedTranscript.includes('check my answer') ||
-        normalizedTranscript.includes('verify answer')) {
-      const currentQuestion = assessment?.questions[currentQuestionIndex];
-      const currentState = getCurrentQuestionState();
-      
-      if (!currentQuestion || !currentState.isAnswered) {
-        onError('Please select an answer first');
-        return;
-      }
-      
-      // Check if the selected answers are correct
-      const selectedSet = new Set(currentState.selectedAnswers);
-      const correctSet = new Set(currentQuestion.correct_answer_ids);
-      const isCorrect = selectedSet.size === correctSet.size && 
-                       Array.from(selectedSet).every(id => correctSet.has(id));
-      
-      updateQuestionState({
-        isChecked: true,
-        showResults: true,
-        isCorrect
-      });
-      
-      // Provide voice feedback using Azure Speech Service with secondary voice
-      if (voiceEnabled) {
-        const feedbackText = isCorrect 
-          ? 'Correct! Well done. Say "next question" to continue.' 
-          : 'Incorrect. Please review the explanation. Say "next question" to continue.';
-        
-        await readFeedbackWithAzureSpeech(feedbackText, isCorrect, selectedLanguage);
-      }
-      
-      const message = isCorrect ? 'Correct answer!' : 'Incorrect answer. Please review the explanation.';
-      if (isCorrect) {
-        onSuccess(message);
-      } else {
-        onError(message);
       }
       return;
     }
@@ -668,15 +990,21 @@ const AssessmentPage = ({
       // Provide voice feedback using Azure Speech Service with secondary voice
       if (voiceEnabled) {
         const feedbackText = `You selected option ${optionNumber + 1}. Say "check answer" to verify, or "next question" to continue.`;
-        await readFeedbackWithAzureSpeech(feedbackText, true, selectedLanguage);
+        // Use skipPrefix=true to avoid saying "Correct!" before checking the answer
+        await readFeedbackWithAzureSpeech(feedbackText, true, selectedLanguage, pauseListening, resumeListening, true);
+        
+        // Inform user that they need to restart the mic
+        setTimeout(() => {
+          onSuccess('🎤 Click the microphone button to continue with voice commands');
+        }, 3000); // Show after feedback audio completes
       }
       return;
     }
     
     // If we get here, the command wasn't recognized
     console.log(`Unrecognized voice command: "${transcript}"`);
-    onError(`Voice command not recognized. Please say "option 1", "option 2", "option 3", "option 4", "check answer", or "next question"`);
-  }, [assessment, currentQuestionIndex, isReading, stopReading, getCurrentQuestionState, handleAnswerSelect, updateQuestionState, voiceEnabled, onSuccess, onError, readFeedbackWithAzureSpeech, selectedLanguage, readQuestionWithAzureSpeech]);
+    onError(`Voice command not recognized. Try: "read question", "option 1-4", "check answer", "next question", or "stop"`);
+  }, [assessment, currentQuestionIndex, isReading, stopReading, getCurrentQuestionState, handleAnswerSelect, voiceEnabled, onSuccess, onError, selectedLanguage, readQuestionWithAzureSpeech, readFeedbackWithAzureSpeech, checkAnswer, pauseListening, resumeListening]);
 
   // Listen for voice command events
   useEffect(() => {
@@ -713,6 +1041,7 @@ const AssessmentPage = ({
       try {
         recognitionRef.current.stop();
         setIsListening(false);
+        setCurrentTranscript(''); // Clear transcript when stopping
       } catch (error) {
         console.error('Failed to stop voice recognition:', error);
       }
@@ -734,19 +1063,21 @@ const AssessmentPage = ({
       return;
     }
     
-    if (!currentState.isChecked) {
-      onError('Please check your answer before moving to the next question');
-      return;
-    }
+    // Remove the isChecked requirement - allow skipping answer checking
+    // if (!currentState.isChecked) {
+    //   onError('Please check your answer before moving to the next question');
+    //   return;
+    // }
     
     if (currentQuestionIndex < (assessment?.questions.length || 0) - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
       
       // Automatically start reading the new question if voice is enabled
       if (voiceEnabled) {
         // Small delay to ensure the component has updated
         setTimeout(async () => {
-          await readQuestionWithAzureSpeech(selectedLanguage);
+          await readQuestionWithAzureSpeech(selectedLanguage, nextIndex); // Pass explicit index
         }, 500);
       }
     }
@@ -804,7 +1135,7 @@ const AssessmentPage = ({
         </Box>
 
         {/* Voice Controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
           <FormControlLabel
             control={
               <Switch
@@ -818,7 +1149,7 @@ const AssessmentPage = ({
           {voiceEnabled && (
             <>
               {/* Language selector for multilingual voice */}
-              <FormControl size="small" sx={{ minWidth: 120, mr: 1 }}>
+              <FormControl size="small" sx={{ minWidth: 140 }}>
                 <InputLabel id="language-select-label">Voice Language</InputLabel>
                 <Select
                   labelId="language-select-label"
@@ -841,6 +1172,28 @@ const AssessmentPage = ({
                 </Select>
               </FormControl>
 
+              {/* Real-time Transcription Display Toggle */}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showTranscription}
+                    onChange={(e) => {
+                      setShowTranscription(e.target.checked);
+                      // Clear existing transcription if disabling
+                      if (!e.target.checked) {
+                        clearProgressiveTextDisplay();
+                      }
+                    }}
+                    size="small"
+                  />
+                }
+                label={
+                  <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
+                    Show Transcription
+                  </Typography>
+                }
+              />
+
               <Button
                 variant="contained"
                 size="small"
@@ -862,16 +1215,96 @@ const AssessmentPage = ({
           )}
         </Box>
 
+        {/* Progressive Transcription Display (Caption-style) */}
+        {showTranscription && progressiveText && (
+          <Box
+            sx={{
+              position: 'relative',
+              mb: 2,
+              p: 2.5,
+              bgcolor: '#E3F2FD', // Light blue background
+              minHeight: '60px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'fadeIn 0.3s ease-in',
+              '@keyframes fadeIn': {
+                from: { opacity: 0, transform: 'translateY(10px)' },
+                to: { opacity: 1, transform: 'translateY(0)' }
+              }
+            }}
+          >
+            <Typography
+              variant="body1"
+              sx={{
+                color: '#1565C0', // Dark blue text
+                fontWeight: 500,
+                textAlign: 'center',
+                lineHeight: 1.8,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontSize: '1.1rem'
+              }}
+            >
+              {progressiveText}
+            </Typography>
+            
+            {/* Typing indicator */}
+            {progressiveText !== fullTranscriptionText && (
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '20px',
+                  bgcolor: '#1565C0', // Dark blue cursor
+                  ml: 0.5,
+                  animation: 'blink 1s infinite',
+                  '@keyframes blink': {
+                    '0%, 50%': { opacity: 1 },
+                    '51%, 100%': { opacity: 0 }
+                  }
+                }}
+              />
+            )}
+          </Box>
+        )}
+
         {/* Status Alerts */}
         {isReading && (
           <Alert severity="info" sx={{ mb: 1 }}>
-            🔊 Reading question aloud... You can interrupt by saying a command or clicking "Stop Reading"
+            <Typography variant="body2">
+              🔊 Reading question aloud in {selectedLanguage === 'en' ? 'English' : selectedLanguage.toUpperCase()}... 
+              You can interrupt by saying a command or clicking "Stop Reading"
+            </Typography>
           </Alert>
         )}
         
         {isListening && voiceEnabled && (
           <Alert severity="success" sx={{ mb: 1 }}>
-            🎤 Listening for voice commands... Say "option 1-4", "check answer", or "next question"
+            <Box>
+              <Typography variant="body2" sx={{ mb: currentTranscript ? 1 : 0 }}>
+                🎤 Listening for voice commands in {selectedLanguage.toUpperCase()}... 
+                Say "read question", "option 1-4", "check answer", "next question", or "stop reading"
+              </Typography>
+              {currentTranscript && (
+                <Box sx={{ 
+                  mt: 1, 
+                  p: 1.5, 
+                  bgcolor: 'background.paper', 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider'
+                }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    Recognized Speech:
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    "{currentTranscript}"
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Alert>
         )}
       </Paper>
@@ -880,7 +1313,7 @@ const AssessmentPage = ({
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" component="div" sx={{ mb: 3, lineHeight: 1.6 }}>
-            {currentQuestion.text}
+            {translatedQuestions.get(currentQuestionIndex) || currentQuestion.text}
           </Typography>
 
           {/* Answer Options */}
@@ -892,54 +1325,61 @@ const AssessmentPage = ({
             {currentQuestion.question_type === QuestionType.MULTIPLE_CHOICE ? (
               <RadioGroup
                 value={currentState.selectedAnswers[0] || ''}
-                onChange={(e) => handleAnswerSelect(e.target.value)}
+                onChange={(e) => handleAnswerSelectWithFeedback(e.target.value)}
               >
-                {currentQuestion.answers.map((answer, index) => (
-                  <FormControlLabel
-                    key={answer.id}
-                    value={answer.id}
-                    control={<Radio />}
-                    label={
-                      <Box>
-                        <Typography component="span" sx={{ fontWeight: 'medium' }}>
-                          Option {index + 1}:
-                        </Typography>
-                        <Typography component="span" sx={{ ml: 1 }}>
-                          {answer.text}
-                        </Typography>
-                      </Box>
-                    }
-                    sx={{ 
-                      mb: 1, 
-                      p: 1.5, 
-                      ml: 0, 
-                      mr: 0, 
-                      border: '1px solid',
-                      borderColor: 'grey.300',
-                      borderRadius: 1,
-                      '&:hover': { bgcolor: 'grey.50' },
-                      ...(currentState.selectedAnswers.includes(answer.id) && { 
-                        bgcolor: 'primary.50',
-                        borderColor: 'primary.main'
-                      })
-                    }}
-                  />
-                ))}
+                {currentQuestion.answers.map((answer, index) => {
+                  // Get translated answers if available, otherwise use original
+                  const translatedAnswers = translatedAnswersMap.get(currentQuestionIndex);
+                  const displayText = translatedAnswers?.[index] || answer.text;
+                  
+                  return (
+                    <FormControlLabel
+                      key={answer.id}
+                      value={answer.id}
+                      control={<Radio />}
+                      label={
+                        <Box>
+                          <Typography component="span" sx={{ fontWeight: 'medium' }}>
+                            Option {index + 1}:
+                          </Typography>
+                          <Typography component="span" sx={{ ml: 1 }}>
+                            {displayText}
+                          </Typography>
+                        </Box>
+                      }
+                      sx={{ 
+                        mb: 1, 
+                        p: 1.5, 
+                        ml: 0, 
+                        mr: 0, 
+                        border: '1px solid',
+                        borderColor: 'grey.300',
+                        borderRadius: 1,
+                        '&:hover': { bgcolor: 'grey.50' },
+                        ...(currentState.selectedAnswers.includes(answer.id) && { 
+                          bgcolor: 'primary.50',
+                          borderColor: 'primary.main'
+                        })
+                      }}
+                    />
+                  );
+                })}
               </RadioGroup>
             ) : (
               <FormGroup>
-                {currentQuestion.answers.map((answer, index) => (
+                {currentQuestion.answers.map((answer, index) => {
+                  // Get translated answers if available, otherwise use original
+                  const translatedAnswers = translatedAnswersMap.get(currentQuestionIndex);
+                  const displayText = translatedAnswers?.[index] || answer.text;
+                  
+                  return (
                   <FormControlLabel
                     key={answer.id}
                     control={
                       <Checkbox
                         checked={currentState.selectedAnswers.includes(answer.id)}
                         onChange={(e) => {
-                          if (e.target.checked) {
-                            handleAnswerSelect(answer.id);
-                          } else {
-                            handleAnswerSelect(answer.id); // This will toggle it off
-                          }
+                          handleAnswerSelectWithFeedback(answer.id);
                         }}
                       />
                     }
@@ -949,7 +1389,7 @@ const AssessmentPage = ({
                           Option {index + 1}:
                         </Typography>
                         <Typography component="span" sx={{ ml: 1 }}>
-                          {answer.text}
+                          {displayText}
                         </Typography>
                       </Box>
                     }
@@ -968,7 +1408,8 @@ const AssessmentPage = ({
                       })
                     }}
                   />
-                ))}
+                  );
+                })}
               </FormGroup>
             )}
           </FormControl>
@@ -1072,28 +1513,77 @@ const AssessmentPage = ({
               • <Box component="strong" sx={{ display: 'inline' }}>"Read question"</Box> - AI will read the current question and all answer options aloud
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              • <Box component="strong" sx={{ display: 'inline' }}>"Option 1", "Option 2", "Option 3", "Option 4"</Box> - Select answer options by voice
+              • <Box component="strong" sx={{ display: 'inline' }}>"Stop reading"</Box> - Immediately stop the AI from reading
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              • <Box component="strong" sx={{ display: 'inline' }}>"Option 1", "Option 2", "Option 3", "Option 4"</Box> - Select answer options by voice or mouse
             </Typography>
             <Typography variant="body2" color="text.secondary">
               • <Box component="strong" sx={{ display: 'inline' }}>"Number 1", "Choice 2", "Answer 3"</Box> - Alternative ways to select options
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              • <Box component="strong" sx={{ display: 'inline' }}>"Check answer"</Box> - Verify if your selected answer is correct
+              • <Box component="strong" sx={{ display: 'inline' }}>"Check answer"</Box> - Verify if your selected answer is correct and view explanation
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              • <Box component="strong" sx={{ display: 'inline' }}>"Next question"</Box> - Move to the next question (after checking answer)
+              • <Box component="strong" sx={{ display: 'inline' }}>"Next question"</Box> - Move to the next question (checking answer is optional)
             </Typography>
             <Typography variant="body2" color="text.secondary">
               • <Box component="strong" sx={{ display: 'inline' }}>"Previous question"</Box> - Go back to the previous question
             </Typography>
             <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'info.dark' }}>
-              💡 Tip: Click the microphone icon to start listening, then speak your command clearly.
+              💡 Tip: The microphone automatically turns off after AI speaks. Click the microphone icon to resume voice commands. Both mouse and voice selection trigger AI feedback.
             </Typography>
           </Box>
         </Paper>
       )}
+
+      {/* Footer */}
+      <Box sx={{ mt: 6, pt: 4, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
+        <Box sx={{ mb: 2 }}>
+          <a 
+            href="https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none' }}
+          >
+            <Box 
+              sx={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 1,
+                px: 2,
+                py: 1,
+                borderRadius: 1,
+                bgcolor: '#24292e',
+                color: 'white',
+                transition: 'all 0.3s',
+                '&:hover': {
+                  bgcolor: '#0969da',
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
+              }}
+            >
+              <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                View on GitHub
+              </Typography>
+            </Box>
+          </a>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          🌟 Open Source Project - We welcome contributions!
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Help us expand to <strong>AWS & GCP Official Practice Test Questions</strong>
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Powered by Azure AI Services | © 2025, All Rights Reserved!
+        </Typography>
+      </Box>
     </Box>
   );
 };
-
 export default AssessmentPage;

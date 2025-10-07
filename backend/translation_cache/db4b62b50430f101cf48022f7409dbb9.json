@@ -1,0 +1,6 @@
+{
+  "translation": "È necessario consentire il traffico HTTP in ingresso sicuro verso una macchina virtuale di Azure. Quale risorsa di rete di Azure è necessario configurare per prima?",
+  "original_text": "You need to allow secure inbound HTTP traffic to an Azure VM. Which Azure networking resource should you configure first?",
+  "target_language": "it",
+  "timestamp": "2025-10-06 10:42:10.240172"
+}

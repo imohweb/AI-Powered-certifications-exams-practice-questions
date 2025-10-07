@@ -1,0 +1,6 @@
+{
+  "translation": "Pregunta: Se le pide que agregue un nuevo campo a la tabla Cliente en Business Central. ¿Qué tipo de objeto AL está diseñado para este propósito?\n\nOpción 1: Extensión de página\nOpción 2: Extensión de la tabla\nOpción 3: Unidad de código\nOpción 4: Extensión del informe",
+  "original_text": "Question: You are asked to add a new field to the Customer table in Business Central. Which AL object type is designed for this purpose?\n\nOption 1: Page Extension\nOption 2: Table Extension\nOption 3: Codeunit\nOption 4: Report Extension",
+  "target_language": "es",
+  "timestamp": "2025-10-03 15:48:52.426828"
+}

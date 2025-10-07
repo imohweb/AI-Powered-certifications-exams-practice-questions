@@ -1,0 +1,6 @@
+{
+  "translation": "Необходимо разрешить трафик из локальной сети в виртуальную сеть Azure по защищенному туннелю. Какой сервис необходимо настроить для установки соединения?",
+  "original_text": "You need to allow traffic from your on-premises network to an Azure virtual network over a secure tunnel. What service should you configure to establish the connection?",
+  "target_language": "ru",
+  "timestamp": "2025-10-05 23:45:27.475457"
+}

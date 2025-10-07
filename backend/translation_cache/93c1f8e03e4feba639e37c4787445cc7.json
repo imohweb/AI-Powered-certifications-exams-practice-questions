@@ -1,0 +1,6 @@
+{
+  "translation": "Está diseñando una solución para hospedar una aplicación web en Azure. La aplicación debe escalar automáticamente en función de la demanda y minimizar la sobrecarga de administración. ¿Qué servicio de Azure debe usar?",
+  "original_text": "You are designing a solution to host a web application in Azure. The application must scale automatically based on demand and minimize management overhead. Which Azure service should you use?",
+  "target_language": "es",
+  "timestamp": "2025-10-07 19:14:09.721783"
+}

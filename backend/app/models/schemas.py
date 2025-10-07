@@ -115,6 +115,9 @@ class AudioResponse(BaseModel):
     audio_url: str = Field(..., description="URL to access the generated audio")
     duration_seconds: Optional[float] = Field(None, description="Audio duration in seconds")
     cache_key: Optional[str] = Field(None, description="Cache key for the audio file")
+    translated_text: Optional[str] = Field(None, description="The translated text that is being spoken (for progressive display)")
+    translated_question: Optional[str] = Field(None, description="The translated question text only")
+    translated_answers: Optional[list[str]] = Field(None, description="List of translated answer options")
 
 
 class SessionProgress(BaseModel):

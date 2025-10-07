@@ -1,0 +1,6 @@
+{
+  "translation": "Pregunta: Está desarrollando una solución de Azure AI que debe extraer frases clave de los comentarios de los usuarios enviados a través de un formulario web. ¿Qué servicio de Azure debe usar?\n\nOpción 1: Traductor de Azure\nOpción 2: Azure Text Analytics\nOpción 3: Azure QnA Maker\nOpción 4: Azure Bot Service",
+  "original_text": "Question: You are developing an Azure AI solution that must extract key phrases from user feedback submitted via a web form. Which Azure service should you use?\n\nOption 1: Azure Translator\nOption 2: Azure Text Analytics\nOption 3: Azure QnA Maker\nOption 4: Azure Bot Service",
+  "target_language": "es",
+  "timestamp": "2025-09-28 22:46:28.116847"
+}

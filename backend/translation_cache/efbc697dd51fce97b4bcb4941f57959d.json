@@ -1,0 +1,6 @@
+{
+  "translation": "Sie müssen eine Konversations-KI-Lösung erstellen, die Benutzerinteraktionen in mehreren Sprachen mithilfe von Azure-Diensten verarbeiten kann. Welchen Azure-Dienst sollten Sie verwenden, um diese Funktionalität zu implementieren?",
+  "original_text": "You need to build a conversational AI solution that can handle user interactions in multiple languages using Azure services. Which Azure service should you use to implement this functionality?",
+  "target_language": "de",
+  "timestamp": "2025-10-06 07:43:50.253799"
+}

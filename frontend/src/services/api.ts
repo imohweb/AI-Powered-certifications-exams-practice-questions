@@ -337,18 +337,11 @@ export const audioApi = {
     answers: string[],
     languageCode: string = 'en'
   ): Promise<AudioResponse> => {
-    // Format the complete question text with answers
-    const answerOptions = answers.map((answer, index) => 
-      `Option ${index + 1}: ${answer}`
-    ).join('\n');
-    
-    const fullQuestionText = `Question: ${questionText}\n\n${answerOptions}`;
-    
-    const response = await api.post<AudioResponse>('/audio/generate/multilingual', null, {
+    const response = await api.post<AudioResponse>('/audio/generate/question/multilingual', null, {
       params: {
-        text: fullQuestionText,
-        language_code: languageCode,
-        voice_type: 'primary'
+        question_text: questionText,
+        answers: answers.join(','),
+        language_code: languageCode
       }
     });
     return response.data;
@@ -360,13 +353,15 @@ export const audioApi = {
   generateFeedbackAudio: async (
     feedbackText: string,
     isCorrect: boolean = true,
-    languageCode: string = 'en'
+    languageCode: string = 'en',
+    skipPrefix: boolean = false
   ): Promise<AudioResponse> => {
     const response = await api.post<AudioResponse>('/audio/generate/feedback', null, {
       params: {
         feedback_text: feedbackText,
         is_correct: isCorrect,
-        language_code: languageCode
+        language_code: languageCode,
+        skip_prefix: skipPrefix
       }
     });
     return response.data;

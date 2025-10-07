@@ -1,0 +1,6 @@
+{
+  "translation": "Question : Vous souhaitez surveiller l’utilisation de l’UC pour toutes les machines virtuelles d’un groupe de ressources. Quel service Azure devez-vous utiliser ?\n\nOption 1 : Azure Security Center\nOption 2 : Azure Monitor\nOption 3 : Azure Advisor\nOption 4 : Azure Policy",
+  "original_text": "Question: You want to monitor CPU utilization for all virtual machines in a resource group. Which Azure service should you use?\n\nOption 1: Azure Security Center\nOption 2: Azure Monitor\nOption 3: Azure Advisor\nOption 4: Azure Policy",
+  "target_language": "fr",
+  "timestamp": "2025-10-02 22:27:18.342884"
+}

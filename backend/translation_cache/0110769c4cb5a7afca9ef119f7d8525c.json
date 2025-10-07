@@ -1,0 +1,6 @@
+{
+  "translation": "Trabaja para un hospital que desea utilizar IA para identificar automáticamente posibles anomalías en las imágenes de rayos X. ¿Qué servicio de Azure debe usar para esta carga de trabajo de Computer Vision?",
+  "original_text": "You work for a hospital that wants to use AI to automatically identify potential anomalies in X-ray images. Which Azure service should you use for this computer vision workload?",
+  "target_language": "es",
+  "timestamp": "2025-10-05 19:03:01.824836"
+}

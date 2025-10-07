@@ -118,13 +118,17 @@ class SimplifiedAIQuestionGenerator:
             
             # Get certification details
             certification_title = CERTIFICATION_EXAMS.get(certification_code, certification_code)
+            logger.info(f"Certification title: {certification_title}")
             
             # Generate questions using AI
+            logger.info(f"Starting AI question generation...")
             questions = await self._generate_ai_questions(certification_code, certification_title)
             
             if not questions:
                 logger.error(f"Failed to generate questions for {certification_code}")
                 return None
+            
+            logger.info(f"Successfully generated {len(questions)} questions")
             
             # Create assessment object
             assessment = PracticeAssessment(
@@ -137,11 +141,11 @@ class SimplifiedAIQuestionGenerator:
                 estimated_duration_minutes=len(questions) * 2  # 2 minutes per question for 50 questions = 100 minutes
             )
             
-            logger.info(f"Successfully generated assessment with {len(questions)} questions for {certification_code}")
+            logger.info(f"✅ Successfully created assessment with {len(questions)} questions for {certification_code}")
             return assessment
             
         except Exception as e:
-            logger.error(f"Error generating assessment for {certification_code}: {e}")
+            logger.error(f"❌ Error generating assessment for {certification_code}: {e}", exc_info=True)
             return None
     
     async def _generate_ai_questions(self, certification_code: str, certification_title: str) -> List[Question]:
@@ -168,28 +172,38 @@ class SimplifiedAIQuestionGenerator:
             return []
     
     async def _generate_text_with_openai(self, prompt: str) -> str:
-        """Generate text using Azure OpenAI."""
+        """Generate text using Azure OpenAI with timeout."""
         try:
-            response = await self.azure_openai.client.chat.completions.create(
-                model=self.azure_openai.deployment,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert Microsoft certification trainer who creates realistic practice exam questions."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                max_tokens=8000,  # Increased for 50 questions
-                temperature=0.7
+            logger.info("Sending request to Azure OpenAI...")
+            
+            # Add timeout using asyncio
+            response = await asyncio.wait_for(
+                self.azure_openai.client.chat.completions.create(
+                    model=self.azure_openai.deployment,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert Microsoft certification trainer who creates realistic practice exam questions."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    max_tokens=8000,  # Increased for 50 questions
+                    temperature=0.7
+                ),
+                timeout=60.0  # 60 second timeout
             )
             
+            logger.info("Successfully received response from Azure OpenAI")
             return response.choices[0].message.content
             
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout error: Azure OpenAI request took longer than 60 seconds")
+            return ""
         except Exception as e:
-            logger.error(f"Error generating text with OpenAI: {e}")
+            logger.error(f"Error generating text with OpenAI: {e}", exc_info=True)
             return ""
     
     def _create_question_generation_prompt(self, certification_code: str, certification_title: str) -> str:

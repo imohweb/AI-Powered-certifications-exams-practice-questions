@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     azure_openai_deployment: Optional[str] = None
     azure_openai_api_version: str = "2024-02-15-preview"
     
+    # Azure Translator Service (Optional)
+    azure_translator_key: Optional[str] = None
+    azure_translator_endpoint: Optional[str] = None
+    azure_translator_region: Optional[str] = None
+    
     # Database
     database_url: str = "sqlite:///./ms_cert_practice.db"
     

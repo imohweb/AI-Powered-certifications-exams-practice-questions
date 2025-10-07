@@ -81,6 +81,10 @@ class AzureSpeechService:
         Returns:
             Azure voice name for the language
         """
+        # Fix language code mapping for Chinese
+        if language_code == 'zh':
+            language_code = 'zh'  # Keep as 'zh' for internal mapping
+            
         voice_name = self.MULTILINGUAL_VOICES.get(language_code.lower(), 
                                                  settings.speech_voice_name_primary)
         logger.info(f"🌐 Language code '{language_code}' mapped to voice: {voice_name}")
@@ -204,7 +208,7 @@ class AzureSpeechService:
             )
             
             audio_filename = f"{cache_key}.mp3"
-            audio_url = f"/audio/{audio_filename}"
+            audio_url = f"/audio-files/{audio_filename}"
             
             # Estimate duration (rough calculation)
             # Average speaking rate is about 150-200 words per minute
@@ -239,16 +243,53 @@ class AzureSpeechService:
             AudioResponse with question audio
         """
         try:
+            # Translate text if not in English
+            translated_question = question_text
+            translated_answers = answers
+            
+            if language_code != "en":
+                from app.services.azure_translator import get_translator_service
+                translator = get_translator_service()
+                if translator:
+                    logger.info(f"🌐 Translating question from English to {language_code}")
+                    
+                    # Translate question text
+                    translated_result = await translator.translate_text(
+                        text=question_text,
+                        target_language=language_code,
+                        source_language="en"
+                    )
+                    if translated_result:
+                        translated_question = translated_result
+                        logger.info(f"✅ Question translation successful")
+                    
+                    # Translate answers
+                    translated_answers = []
+                    for answer in answers:
+                        answer_result = await translator.translate_text(
+                            text=answer,
+                            target_language=language_code,
+                            source_language="en"
+                        )
+                        if answer_result:
+                            translated_answers.append(answer_result)
+                        else:
+                            translated_answers.append(answer)  # Fallback to original
+                    
+                    logger.info(f"✅ Answers translation completed")
+                else:
+                    logger.warning(f"⚠️ Azure Translator not configured, using original English text")
+            
             # Get appropriate voice for the language
             voice_name = self.get_voice_for_language(language_code)
             voice_settings = self.get_voice_settings(self.VoiceType.PRIMARY)
             
-            # Build complete question text
-            full_text = f"{question_text}\n\n"
+            # Build complete question text with translated content
+            full_text = f"{translated_question}\n\n"
             
             # Add answer options
             option_labels = ["A", "B", "C", "D", "E", "F"]
-            for i, answer in enumerate(answers[:6]):  # Support up to 6 options
+            for i, answer in enumerate(translated_answers[:6]):  # Support up to 6 options
                 if i < len(option_labels):
                     full_text += f"Option {option_labels[i]}: {answer}\n"
             
@@ -260,7 +301,14 @@ class AzureSpeechService:
                 speech_pitch=voice_settings["speech_pitch"]
             )
             
-            return await self.generate_audio_response(request)
+            audio_response = await self.generate_audio_response(request)
+            if audio_response:
+                # Include translated text for progressive display on frontend
+                audio_response.translated_text = full_text
+                # Include translated question and answers separately for UI display
+                audio_response.translated_question = translated_question
+                audio_response.translated_answers = translated_answers
+            return audio_response
             
         except Exception as e:
             logger.error(f"Error generating question audio: {e}")
@@ -270,37 +318,72 @@ class AzureSpeechService:
         self,
         feedback_text: str,
         is_correct: bool = True,
-        language_code: str = "en"
+        language_code: str = "en",
+        skip_prefix: bool = False
     ) -> Optional[AudioResponse]:
         """
         Generate audio for feedback/results using the secondary voice.
         
         Args:
             feedback_text: The feedback text
-            is_correct: Whether the answer was correct
+            is_correct: Whether the answer was correct (used for voice style)
             language_code: Two-letter language code
+            skip_prefix: If True, skip adding "Correct!" or "Incorrect." prefix
             
         Returns:
             AudioResponse with feedback audio
         """
         try:
+            # Determine voice settings
             voice_settings = self.get_voice_settings(self.VoiceType.SECONDARY)
-            
-            # Add emotional context to feedback
-            if is_correct:
-                enhanced_text = f"Correct! {feedback_text}"
+
+            # Add emotional context prefix to feedback (unless skip_prefix is True)
+            if skip_prefix:
+                base_text = feedback_text
             else:
-                enhanced_text = f"Incorrect. {feedback_text}"
-            
-            # Create audio request with secondary voice
+                if is_correct:
+                    base_text = f"Correct! {feedback_text}"
+                else:
+                    base_text = f"Incorrect. {feedback_text}"
+
+            # Translate if needed
+            final_text = base_text
+            chosen_voice = voice_settings["voice_name"]
+            if language_code != "en":
+                try:
+                    from app.services.azure_translator import get_translator_service
+                    translator = get_translator_service()
+                    if translator:
+                        translated = await translator.translate_text(
+                            text=base_text,
+                            target_language=language_code,
+                            source_language="en"
+                        )
+                        if translated:
+                            final_text = translated
+                        else:
+                            logger.warning("⚠️ Feedback translation failed; using English text")
+                    else:
+                        logger.warning("⚠️ Azure Translator not configured; using English text for feedback")
+                except Exception as te:
+                    logger.warning(f"⚠️ Feedback translation error: {te}")
+
+                # For non-English, use a language-appropriate voice
+                chosen_voice = self.get_voice_for_language(language_code)
+
+            # Create audio request
             request = AudioRequest(
-                text=enhanced_text,
-                voice_name=voice_settings["voice_name"],
+                text=final_text,
+                voice_name=chosen_voice,
                 speech_rate=voice_settings["speech_rate"],
                 speech_pitch=voice_settings["speech_pitch"]
             )
-            
-            return await self.generate_audio_response(request)
+
+            audio_response = await self.generate_audio_response(request)
+            if audio_response:
+                # Include translated feedback text for progressive display on frontend
+                audio_response.translated_text = final_text
+            return audio_response
             
         except Exception as e:
             logger.error(f"Error generating feedback audio: {e}")
@@ -313,7 +396,7 @@ class AzureSpeechService:
         voice_type: str = VoiceType.PRIMARY
     ) -> Optional[AudioResponse]:
         """
-        Generate audio in a specific language with appropriate voice.
+        Generate audio in a specific language with appropriate voice and translation.
         
         Args:
             text: Text to convert to speech
@@ -326,25 +409,60 @@ class AzureSpeechService:
         try:
             logger.info(f"🎤 Generating multilingual audio: language={language_code}, voice_type={voice_type}")
             
-            # Get language-specific voice
+            # Translate text if not in English
+            translated_text = text
+            if language_code != "en":
+                from app.services.azure_translator import get_translator_service
+                translator = get_translator_service()
+                if translator:
+                    logger.info(f"🌐 Translating text from English to {language_code}")
+                    logger.info(f"🔤 Original text (first 100 chars): {text[:100]}...")
+                    translated_result = await translator.translate_text(
+                        text=text,
+                        target_language=language_code,
+                        source_language="en"
+                    )
+                    if translated_result:
+                        translated_text = translated_result
+                        logger.info(f"✅ Translation successful: {text[:50]}... → {translated_text[:50]}...")
+                    else:
+                        logger.warning(f"⚠️ Translation failed, using original English text")
+                else:
+                    logger.warning(f"⚠️ Azure Translator not configured, using original English text")
+            else:
+                logger.info(f"🔤 Using original English text for language code: {language_code}")
+            
+            # Validate text length (Azure Speech Service has limits)
+            max_length = 10000  # Azure Speech Service limit
+            if len(translated_text) > max_length:
+                logger.warning(f"⚠️ Text too long ({len(translated_text)} chars), truncating to {max_length}")
+                translated_text = translated_text[:max_length] + "..."
+            
+            # Select appropriate voice
             if voice_type == self.VoiceType.SECONDARY:
                 voice_settings = self.get_voice_settings(self.VoiceType.SECONDARY)
-                voice_name = voice_settings["voice_name"]  # Use secondary voice as-is
-                logger.info(f"🔊 Using secondary voice: {voice_name}")
+                # If non-English, prefer a language-appropriate secondary by reusing mapping
+                if language_code != "en":
+                    voice_name = self.get_voice_for_language(language_code)
+                    logger.info(f"🔊 Using language-appropriate secondary voice for {language_code}: {voice_name}")
+                else:
+                    voice_name = voice_settings["voice_name"]
+                    logger.info(f"🔊 Using default secondary voice: {voice_name}")
             else:
                 voice_name = self.get_voice_for_language(language_code)
                 voice_settings = self.get_voice_settings(self.VoiceType.PRIMARY)
                 logger.info(f"🔊 Using primary voice for {language_code}: {voice_name}")
             
-            # Create audio request
+            # Create audio request with translated text
             request = AudioRequest(
-                text=text,
+                text=translated_text,
                 voice_name=voice_name,
                 speech_rate=voice_settings["speech_rate"],
                 speech_pitch=voice_settings["speech_pitch"]
             )
             
             logger.info(f"🔊 Final audio request: voice={request.voice_name}, rate={request.speech_rate}, pitch={request.speech_pitch}")
+            logger.info(f"🔊 Text length: {len(translated_text)} characters")
             
             return await self.generate_audio_response(request)
             
@@ -360,16 +478,7 @@ class AzureSpeechService:
         speech_pitch: Optional[str] = None
     ) -> str:
         """
-        Create SSML (Speech Synthesis Markup Language) from text and voice settings.
-        
-        Args:
-            text: Text to convert
-            voice_name: Azure voice name
-            speech_rate: Speech rate adjustment
-            speech_pitch: Speech pitch adjustment
-            
-        Returns:
-            SSML string
+        Create simple, reliable SSML from text and voice settings.
         """
         # Use provided voice or default
         voice = voice_name or settings.speech_voice_name
@@ -378,22 +487,15 @@ class AzureSpeechService:
         
         # Determine language from voice name for proper SSML language tagging
         xml_lang = self._get_xml_lang_from_voice(voice)
-        logger.info(f"🗣️ Creating SSML: voice={voice}, xml:lang={xml_lang}, rate={rate}, pitch={pitch}")
+        logger.info(f"🗣️ Creating simple SSML: voice={voice}, xml:lang={xml_lang}, rate={rate}, pitch={pitch}")
         
-        # Clean and escape text
+        # Clean text - just remove HTML and escape XML characters
         clean_text = self._clean_text_for_speech(text)
         
-        ssml = f'''
-        <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{xml_lang}">
-            <voice name="{voice}">
-                <prosody rate="{rate}" pitch="{pitch}">
-                    {clean_text}
-                </prosody>
-            </voice>
-        </speak>
-        '''
+        # Create simple SSML without complex enhancements
+        ssml = f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{xml_lang}"><voice name="{voice}"><prosody rate="{rate}" pitch="{pitch}">{clean_text}</prosody></voice></speak>'
         
-        return ssml.strip()
+        return ssml
     
     def _get_xml_lang_from_voice(self, voice_name: str) -> str:
         """
@@ -424,57 +526,17 @@ class AzureSpeechService:
         Returns:
             Cleaned text suitable for speech synthesis
         """
-        # Remove or replace problematic characters
-        text = text.replace('&', ' and ')
-        text = text.replace('<', ' less than ')
-        text = text.replace('>', ' greater than ')
-        text = text.replace('"', ' quote ')
-        text = text.replace("'", ' apostrophe ')
-        
-        # Handle multiple newlines first, then single newlines
-        # This ensures consistent spacing and prevents issues with SSML generation
+        import html
         import re
-        text = re.sub(r'\n{2,}', ' ', text)  # Replace 2+ consecutive newlines with single space
-        text = text.replace('\n', ' ')       # Replace remaining single newlines with spaces
         
-        # Clean up any excessive whitespace that might have been created
-        text = re.sub(r'\s+', ' ', text)     # Replace multiple spaces with single space
-        text = text.strip()                  # Remove leading/trailing whitespace
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', text)
         
-        # Add pauses for better speech flow and option separation
-        text = text.replace('.', '. <break time="600ms"/>')
-        text = text.replace('?', '? <break time="600ms"/>')
-        text = text.replace('!', '! <break time="600ms"/>')
-        text = text.replace(';', '; <break time="400ms"/>')
-        text = text.replace(':', ': <break time="400ms"/>')
+        # Escape XML characters for SSML safety
+        text = html.escape(text, quote=False)
         
-        # Add longer pauses for option separations (used in question reading)
-        text = text.replace('Option 1:', '<break time="800ms"/>Option 1:')
-        text = text.replace('Option 2:', '<break time="800ms"/>Option 2:')
-        text = text.replace('Option 3:', '<break time="800ms"/>Option 3:')
-        text = text.replace('Option 4:', '<break time="800ms"/>Option 4:')
-        
-        # Add pauses after each option description
-        if 'Option 1:' in text or 'Option 2:' in text or 'Option 3:' in text or 'Option 4:' in text:
-            # This indicates we're reading question options, add emphasis and pacing
-            text = text.replace('1:', '1: <emphasis level="moderate">')
-            text = text.replace('2:', '2: <emphasis level="moderate">')
-            text = text.replace('3:', '3: <emphasis level="moderate">')
-            text = text.replace('4:', '4: <emphasis level="moderate">')
-            text = text.replace('. Option', '.</emphasis> <break time="1s"/>Option')
-            text = text.replace('. Please', '.</emphasis> <break time="1s"/>Please')
-        
-        # Handle code-related terms
-        text = text.replace('Azure', '<phoneme alphabet="ipa" ph="ˈæʒər">Azure</phoneme>')
-        text = text.replace('API', '<say-as interpret-as="spell-out">API</say-as>')
-        text = text.replace('JSON', '<say-as interpret-as="spell-out">JSON</say-as>')
-        text = text.replace('SQL', '<say-as interpret-as="spell-out">SQL</say-as>')
-        text = text.replace('VM', '<say-as interpret-as="spell-out">VM</say-as>')
-        
-        # Handle common certification terms
-        text = text.replace('AZ-900', '<say-as interpret-as="characters">AZ-900</say-as>')
-        text = text.replace('AZ-204', '<say-as interpret-as="characters">AZ-204</say-as>')
-        text = text.replace('MS-900', '<say-as interpret-as="characters">MS-900</say-as>')
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
         
         return text
     

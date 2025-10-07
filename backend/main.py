@@ -40,15 +40,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files for audio serving
-audio_cache_path = Path(settings.audio_cache_dir)
-if audio_cache_path.exists():
-    app.mount("/audio", StaticFiles(directory=str(audio_cache_path)), name="audio")
-
-# Include routers
+# Include routers first
 app.include_router(assessments.router, prefix="/api/v1/assessments", tags=["assessments"])
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
+
+# Mount static files for audio serving at /api/v1/audio-files (after routers to avoid conflicts)
+audio_cache_path = Path(settings.audio_cache_dir)
+if audio_cache_path.exists():
+    app.mount("/api/v1/audio-files", StaticFiles(directory=str(audio_cache_path)), name="audio")
 
 
 # Dependency to get Azure Speech Service
