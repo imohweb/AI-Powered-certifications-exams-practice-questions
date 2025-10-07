@@ -93,20 +93,16 @@ jobs:
             --registry-server ${{ env.ACR_NAME }}.azurecr.io \
             --env-vars \
               AZURE_SPEECH_KEY=secretref:azure-speech-key \
-              AZURE_SPEECH_REGION=secretref:azure-speech-region \
+              AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }} \
               AZURE_TRANSLATOR_KEY=secretref:azure-translator-key \
-              AZURE_TRANSLATOR_REGION=secretref:azure-translator-region \
+              AZURE_TRANSLATOR_REGION=${{ secrets.AZURE_TRANSLATOR_REGION }} \
               AZURE_OPENAI_API_KEY=secretref:azure-openai-api-key \
-              AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint \
-              AZURE_OPENAI_DEPLOYMENT_NAME=secretref:azure-openai-deployment-name \
+              AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }} \
+              AZURE_OPENAI_DEPLOYMENT_NAME=${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }} \
             --secrets \
               azure-speech-key=${{ secrets.AZURE_SPEECH_KEY }} \
-              azure-speech-region=${{ secrets.AZURE_SPEECH_REGION }} \
               azure-translator-key=${{ secrets.AZURE_TRANSLATOR_KEY }} \
-              azure-translator-region=${{ secrets.AZURE_TRANSLATOR_REGION }} \
-              azure-openai-api-key=${{ secrets.AZURE_OPENAI_API_KEY }} \
-              azure-openai-endpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }} \
-              azure-openai-deployment-name=${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}
+              azure-openai-api-key=${{ secrets.AZURE_OPENAI_API_KEY }}
 
       - name: Update Container App
         if: steps.check_app.outputs.APP_EXISTS == 'true'
@@ -117,12 +113,12 @@ jobs:
             --image ${{ steps.build_image.outputs.FULL_IMAGE_NAME }} \
             --set-env-vars \
               AZURE_SPEECH_KEY=secretref:azure-speech-key \
-              AZURE_SPEECH_REGION=secretref:azure-speech-region \
+              AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }} \
               AZURE_TRANSLATOR_KEY=secretref:azure-translator-key \
-              AZURE_TRANSLATOR_REGION=secretref:azure-translator-region \
+              AZURE_TRANSLATOR_REGION=${{ secrets.AZURE_TRANSLATOR_REGION }} \
               AZURE_OPENAI_API_KEY=secretref:azure-openai-api-key \
-              AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint \
-              AZURE_OPENAI_DEPLOYMENT_NAME=secretref:azure-openai-deployment-name
+              AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }} \
+              AZURE_OPENAI_DEPLOYMENT_NAME=${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}
 
       - name: Update secrets (if needed)
         if: steps.check_app.outputs.APP_EXISTS == 'true'
@@ -132,12 +128,8 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --secrets \
               azure-speech-key=${{ secrets.AZURE_SPEECH_KEY }} \
-              azure-speech-region=${{ secrets.AZURE_SPEECH_REGION }} \
               azure-translator-key=${{ secrets.AZURE_TRANSLATOR_KEY }} \
-              azure-translator-region=${{ secrets.AZURE_TRANSLATOR_REGION }} \
-              azure-openai-api-key=${{ secrets.AZURE_OPENAI_API_KEY }} \
-              azure-openai-endpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }} \
-              azure-openai-deployment-name=${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}
+              azure-openai-api-key=${{ secrets.AZURE_OPENAI_API_KEY }}
 
       - name: Get Container App URL
         id: get_url
