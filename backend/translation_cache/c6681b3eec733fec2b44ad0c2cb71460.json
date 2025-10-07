@@ -1,0 +1,6 @@
+{
+  "translation": "Qed tfassal soluzzjoni Azure li tipproċessa volumi kbar ta 'dejta. Liema servizz Azure għandek tuża biex timplimenta pipeline tal-ipproċessar tad-dejta skalabbli u mingħajr server li jista 'jimmaniġġja kemm l-ammont ta' xogħol tal-ipproċessar tal-lott kif ukoll tal-fluss?\\n\\nGħażliet tat-tweġiba:\\nGħażla 1: Azure Data Factory\\nGħażla 2: Azure Stream Analytics\\nGħażla 3: Azure Synapse Analytics\\nGħażla 4: Funzjonijiet Azure",
+  "original_text": "You are designing an Azure solution that will process large volumes of data. Which Azure service should you use to implement a scalable, serverless data processing pipeline that can handle both batch and stream processing workloads?\\n\\nAnswer Options:\\nOption 1: Azure Data Factory\\nOption 2: Azure Stream Analytics\\nOption 3: Azure Synapse Analytics\\nOption 4: Azure Functions",
+  "target_language": "mt",
+  "timestamp": "2025-09-28 22:36:44.473752"
+}

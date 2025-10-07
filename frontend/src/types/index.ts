@@ -92,6 +92,9 @@ export interface AudioResponse {
   audio_url: string;
   duration_seconds?: number;
   cache_key?: string;
+  translated_text?: string;  // Translated text for progressive display
+  translated_question?: string;  // Translated question text only
+  translated_answers?: string[];  // Translated answer options
 }
 
 export interface CertificationInfo {

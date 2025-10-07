@@ -1,0 +1,6 @@
+{
+  "translation": "प्रश्न: आप ईमेल से ग्राहकों की प्रतिक्रिया का विश्लेषण करने के लिए Azure AI समाधान डिज़ाइन कर रहे हैं। आप ईमेल सामग्री में भावना और प्रमुख वाक्यांशों की पहचान करना चाहते हैं। आपको किस Azure सेवा का उपयोग करना चाहिए?\n\nविकल्प 1: Azure संज्ञानात्मक खोज\nविकल्प 2: टेक्स्ट एनालिटिक्स एपीआई\nविकल्प 3: Azure फॉर्म पहचानकर्ता\nविकल्प 4: Azure QnA मेकर",
+  "original_text": "Question: You are designing an Azure AI solution to analyze customer feedback from emails. You want to identify sentiment and key phrases in the email content. Which Azure service should you use?\n\nOption 1: Azure Cognitive Search\nOption 2: Text Analytics API\nOption 3: Azure Form Recognizer\nOption 4: Azure QnA Maker",
+  "target_language": "hi",
+  "timestamp": "2025-10-02 18:54:32.533405"
+}

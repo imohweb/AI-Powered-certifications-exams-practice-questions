@@ -1,0 +1,6 @@
+{
+  "translation": "Pregunta: Un cliente necesita personalizar el informe Factura de ventas en Business Central para incluir un nuevo campo. ¿Qué debe usar un desarrollador para modificar el diseño del informe existente sin cambiar el objeto de informe original?\n\nOpción 1: Crear un nuevo objeto de informe\nOpción 2: Usar la extensión de informe\nOpción 3: Modificar el diseño RDLC directamente\nOpción 4: Usar extensión de tabla",
+  "original_text": "Question: A customer needs to customize the Sales Invoice report in Business Central to include a new field. What should a developer use to modify the existing report layout without changing the original report object?\n\nOption 1: Create a new report object\nOption 2: Use Report Extension\nOption 3: Modify the RDLC layout directly\nOption 4: Use Table Extension",
+  "target_language": "es",
+  "timestamp": "2025-10-03 15:48:49.116285"
+}

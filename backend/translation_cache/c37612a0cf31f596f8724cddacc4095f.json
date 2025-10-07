@@ -1,0 +1,6 @@
+{
+  "translation": "Votre équipe souhaite automatiser le déploiement d’une application web sur Azure App Service à l’aide d’Azure Pipelines. Quelle est la PREMIÈRE étape à suivre pour intégrer le contrôle de code source à Azure Pipelines ?",
+  "original_text": "Your team wants to automate the deployment of a web application to Azure App Service using Azure Pipelines. What is the FIRST step you should take to integrate source control with Azure Pipelines?",
+  "target_language": "fr",
+  "timestamp": "2025-10-05 23:51:07.310609"
+}

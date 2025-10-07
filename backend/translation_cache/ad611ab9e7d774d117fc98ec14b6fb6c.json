@@ -1,0 +1,6 @@
+{
+  "translation": "Está diseñando una solución de Azure que procesará grandes volúmenes de datos. ¿Qué servicio de Azure debe usar para implementar una canalización de procesamiento de datos escalable y sin servidor que pueda controlar cargas de trabajo de procesamiento por lotes y de flujo?\\n\\nOpciones de respuesta:\\nOpción 1: Azure Data Factory\\nOpción 2: Azure Stream Analytics\\nOpción 3: Azure Synapse Analytics\\nOpción 4: Azure Functions",
+  "original_text": "You are designing an Azure solution that will process large volumes of data. Which Azure service should you use to implement a scalable, serverless data processing pipeline that can handle both batch and stream processing workloads?\\n\\nAnswer Options:\\nOption 1: Azure Data Factory\\nOption 2: Azure Stream Analytics\\nOption 3: Azure Synapse Analytics\\nOption 4: Azure Functions",
+  "target_language": "es",
+  "timestamp": "2025-09-28 22:36:16.457172"
+}

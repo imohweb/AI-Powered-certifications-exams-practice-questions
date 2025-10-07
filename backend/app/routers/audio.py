@@ -433,7 +433,7 @@ async def generate_multilingual_audio(
 @router.post("/generate/question/multilingual", response_model=AudioResponse)
 async def generate_multilingual_question_audio(
     question_text: str,
-    answers: list[str],
+    answers: str,  # Comma-separated answers
     language_code: str = "en",
     speech_service: AzureSpeechService = Depends(get_speech_service)
 ):
@@ -442,7 +442,7 @@ async def generate_multilingual_question_audio(
     
     Args:
         question_text: The question text
-        answers: List of answer options
+        answers: Comma-separated list of answer options
         language_code: Two-letter language code
         speech_service: Azure Speech Service instance
         
@@ -457,10 +457,13 @@ async def generate_multilingual_question_audio(
                 detail=f"Unsupported language code: {language_code}. Supported languages: {', '.join(settings.supported_languages)}"
             )
         
+        # Parse answers
+        answer_list = [answer.strip() for answer in answers.split(',') if answer.strip()]
+        
         # Generate multilingual question audio
         audio_response = await speech_service.generate_question_audio(
             question_text=question_text,
-            answers=answers,
+            answers=answer_list,
             language_code=language_code
         )
         
@@ -482,6 +485,7 @@ async def generate_feedback_audio(
     feedback_text: str,
     is_correct: bool = True,
     language_code: str = "en",
+    skip_prefix: bool = False,
     speech_service: AzureSpeechService = Depends(get_speech_service)
 ):
     """
@@ -489,8 +493,9 @@ async def generate_feedback_audio(
     
     Args:
         feedback_text: The feedback text
-        is_correct: Whether the answer was correct
+        is_correct: Whether the answer was correct (affects voice style)
         language_code: Two-letter language code
+        skip_prefix: If True, skip adding "Correct!" or "Incorrect." prefix
         speech_service: Azure Speech Service instance
         
     Returns:
@@ -508,7 +513,8 @@ async def generate_feedback_audio(
         audio_response = await speech_service.generate_feedback_audio(
             feedback_text=feedback_text,
             is_correct=is_correct,
-            language_code=language_code
+            language_code=language_code,
+            skip_prefix=skip_prefix
         )
         
         if not audio_response:
@@ -553,3 +559,56 @@ async def get_multilingual_voices():
     except Exception as e:
         logger.error(f"Error getting multilingual voices: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get multilingual voices: {str(e)}")
+
+
+@router.post("/test/translation")
+async def test_translation(
+    text: str = "What is Azure?",
+    language_code: str = "es"
+):
+    """
+    Test translation functionality.
+    
+    Args:
+        text: Text to translate
+        language_code: Target language code
+        
+    Returns:
+        Translation result
+    """
+    try:
+        from app.services.azure_translator import get_translator_service
+        
+        translator = get_translator_service()
+        if not translator:
+            return {
+                "status": "error",
+                "message": "Azure Translator not configured",
+                "original_text": text,
+                "target_language": language_code,
+                "translated_text": None
+            }
+        
+        translated_text = await translator.translate_text(
+            text=text,
+            target_language=language_code,
+            source_language="en"
+        )
+        
+        return {
+            "status": "success" if translated_text else "failed",
+            "message": "Translation completed" if translated_text else "Translation failed",
+            "original_text": text,
+            "target_language": language_code,
+            "translated_text": translated_text
+        }
+        
+    except Exception as e:
+        logger.error(f"Error testing translation: {e}")
+        return {
+            "status": "error",
+            "message": f"Translation test failed: {str(e)}",
+            "original_text": text,
+            "target_language": language_code,
+            "translated_text": None
+        }
