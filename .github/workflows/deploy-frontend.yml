@@ -43,7 +43,10 @@ jobs:
       - name: Create .env file
         working-directory: ./frontend
         run: |
-          echo "REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}/api/v1" > .env
+          # Remove trailing slash from API URL if present, then append /api/v1
+          API_BASE_URL="${{ secrets.REACT_APP_API_URL }}"
+          API_BASE_URL="${API_BASE_URL%/}"
+          echo "REACT_APP_API_URL=${API_BASE_URL}/api/v1" > .env
           echo "REACT_APP_ENV=production" >> .env
 
       - name: Build frontend
