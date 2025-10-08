@@ -44,7 +44,11 @@ class Settings(BaseSettings):
         "http://localhost:3001", 
         "http://127.0.0.1:3001",
         "http://localhost:3000", 
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        "https://imohweb.github.io",  # GitHub Pages root
+        "http://imohweb.github.io",   # GitHub Pages root (fallback)
+        "https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions",  # GitHub Pages frontend
+        "http://imohweb.github.io/AI-Powered-certifications-exams-practice-questions"    # GitHub Pages frontend (fallback)
     ]
     
     # Rate Limiting
