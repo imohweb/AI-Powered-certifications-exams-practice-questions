@@ -54,4 +54,4 @@ root.render(
       </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
-);
+);// Trigger frontend redeploy - Wed Oct  8 04:04:19 CEST 2025
