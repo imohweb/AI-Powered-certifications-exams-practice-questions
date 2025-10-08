@@ -24,6 +24,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: cert-practice-question-env
+    outputs:
+      api_url: ${{ steps.create_env.outputs.API_URL }}
     
     steps:
       - name: Checkout code
@@ -41,13 +43,31 @@ jobs:
         run: npm ci
 
       - name: Create .env file
+        id: create_env
         working-directory: ./frontend
         run: |
-          # Remove trailing slash from API URL if present, then append /api/v1
-          API_BASE_URL="${{ secrets.REACT_APP_API_URL }}"
-          API_BASE_URL="${API_BASE_URL%/}"
-          echo "REACT_APP_API_URL=${API_BASE_URL}/api/v1" > .env
+          # Use the backend Container App URL
+          # Format: https://{container-app-name}.{region}.azurecontainerapps.io
+          BACKEND_URL="${{ secrets.BACKEND_CONTAINER_APP_URL }}"
+          
+          # If BACKEND_CONTAINER_APP_URL is not set, fall back to constructing it from parts
+          if [ -z "$BACKEND_URL" ]; then
+            BACKEND_URL="https://${{ secrets.CONTAINER_APP_NAME }}.${{ secrets.AZURE_REGION }}.azurecontainerapps.io"
+          fi
+          
+          # Remove trailing slash if present
+          BACKEND_URL="${BACKEND_URL%/}"
+          
+          # Create .env file with the API URL (already includes /api/v1 path)
+          API_URL="${BACKEND_URL}/api/v1"
+          echo "REACT_APP_API_URL=${API_URL}" > .env
           echo "REACT_APP_ENV=production" >> .env
+          
+          # Export for use in summary
+          echo "API_URL=${API_URL}" >> $GITHUB_OUTPUT
+          
+          # Log the configuration (for debugging)
+          echo "Frontend will connect to: ${API_URL}"
 
       - name: Build frontend
         working-directory: ./frontend
@@ -84,6 +104,10 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| URL | ${{ steps.deployment.outputs.page_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend URL | ${{ steps.deployment.outputs.page_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend API | \`${{ needs.build.outputs.api_url }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Environment | Production |" >> $GITHUB_STEP_SUMMARY
           echo "| Status | Live |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Frontend is configured to connect to the backend API shown above." >> $GITHUB_STEP_SUMMARY
+
