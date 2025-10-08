@@ -39,14 +39,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     secret_key: str = "your-secret-key-change-in-production"
     
-    # CORS - Note: Origin is protocol + domain, NOT including path
+    # CORS - Production GitHub Pages URL
     cors_origins: List[str] = [
-        "http://localhost:3001", 
-        "http://127.0.0.1:3001",
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "https://imohweb.github.io",  # GitHub Pages (covers all paths under this domain)
-        "http://imohweb.github.io"    # GitHub Pages HTTP fallback
+        "https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions",
     ]
     
     # Rate Limiting
