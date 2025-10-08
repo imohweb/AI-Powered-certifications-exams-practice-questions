@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     secret_key: str = "your-secret-key-change-in-production"
     
     # CORS - Production GitHub Pages URL
+    # Updated: 2025-10-08 - Specific GitHub Pages URL to avoid conflicts
     cors_origins: List[str] = [
         "https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions",
     ]
