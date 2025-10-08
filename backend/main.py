@@ -1,5 +1,6 @@
 """
 Main FastAPI application with Azure Speech Service integration.
+Redeployed: 2025-10-08
 """
 
 from fastapi import FastAPI, HTTPException, Depends
