@@ -94,6 +94,7 @@ jobs:
             --memory 2.0Gi \
             --registry-server ${{ env.ACR_NAME }}.azurecr.io \
             --env-vars \
+              CORS_ORIGINS="https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions" \
               AZURE_SPEECH_KEY=secretref:azure-speech-key \
               AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }} \
               AZURE_TRANSLATOR_KEY=secretref:azure-translator-key \
@@ -114,6 +115,7 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ steps.build_image.outputs.FULL_IMAGE_NAME }} \
             --set-env-vars \
+              CORS_ORIGINS="https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions" \
               AZURE_SPEECH_KEY=secretref:azure-speech-key \
               AZURE_SPEECH_REGION=${{ secrets.AZURE_SPEECH_REGION }} \
               AZURE_TRANSLATOR_KEY=secretref:azure-translator-key \
