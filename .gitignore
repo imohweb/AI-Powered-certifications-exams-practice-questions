@@ -110,3 +110,5 @@ backend-logs.zip
 LogFiles/
 webapp-logs-new.zip
 webapp-logs-new/
+webapp-logs-latest.zip
+webapp-logs-latest/
