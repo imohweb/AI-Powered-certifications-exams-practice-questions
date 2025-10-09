@@ -11,8 +11,6 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: backend-ai-practice-questions-app
-  ACR_NAME: ${{ secrets.ACR_NAME }}
-  IMAGE_NAME: backend-ai-practice-questions
 
 jobs:
   build-and-deploy:
@@ -26,42 +24,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Log in to Azure Container Registry
-        run: |
-          az acr login --name ${{ env.ACR_NAME }}
-
-      - name: Get build number
-        id: build_number
-        run: |
-          BUILD_NUMBER=${{ github.run_number }}
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_OUTPUT
-          echo "Build number: $BUILD_NUMBER"
-
-      - name: Build and push Docker image
-        id: build_image
-        working-directory: ./backend
-        run: |
-          IMAGE_TAG=${{ steps.build_number.outputs.BUILD_NUMBER }}
-          FULL_IMAGE_NAME=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${IMAGE_TAG}
-          LATEST_IMAGE_NAME=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
-          
-          echo "Building image: $FULL_IMAGE_NAME"
-          
-          # Build and push with build number tag
-          docker build -t $FULL_IMAGE_NAME -t $LATEST_IMAGE_NAME .
-          docker push $FULL_IMAGE_NAME
-          docker push $LATEST_IMAGE_NAME
-          
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "FULL_IMAGE_NAME=$FULL_IMAGE_NAME" >> $GITHUB_OUTPUT
 
       - name: Check if Web App exists
         id: check_webapp
@@ -97,29 +63,23 @@ jobs:
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --plan backend-ai-practice-plan \
-            --deployment-container-image-name ${{ steps.build_image.outputs.FULL_IMAGE_NAME }}
+            --runtime "PYTHON:3.11"
 
-      - name: Configure Web App
+      - name: Configure Web App Settings
         run: |
-          # Enable container logging
+          # Enable application logging
           az webapp log config \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --docker-container-logging filesystem
-
-          # Configure ACR credentials
-          az webapp config container set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --docker-custom-image-name ${{ steps.build_image.outputs.FULL_IMAGE_NAME }} \
-            --docker-registry-server-url https://${{ env.ACR_NAME }}.azurecr.io
+            --application-logging filesystem \
+            --level information
 
           # Set environment variables
           az webapp config appsettings set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --settings \
-              WEBSITES_PORT=8000 \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=true \
               CORS_ORIGINS='https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions' \
               AZURE_SPEECH_KEY="${{ secrets.AZURE_SPEECH_KEY }}" \
               AZURE_SPEECH_REGION="${{ secrets.AZURE_SPEECH_REGION }}" \
@@ -129,11 +89,11 @@ jobs:
               AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
               AZURE_OPENAI_DEPLOYMENT_NAME="${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}"
 
-      - name: Restart Web App
-        run: |
-          az webapp restart \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ./backend
 
       - name: Get Web App URL
         id: get_url
@@ -145,7 +105,7 @@ jobs:
       - name: Wait for deployment
         run: |
           echo "Waiting for web app to be ready..."
-          sleep 30
+          sleep 45
 
       - name: Test backend health
         id: test_health
@@ -154,18 +114,19 @@ jobs:
           WEBAPP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
           echo "Testing backend at: $WEBAPP_URL/health"
           
-          for i in {1..10}; do
-            if curl -f -s "$WEBAPP_URL/health" > /dev/null; then
-              echo "Backend is healthy!"
+          for i in {1..15}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$WEBAPP_URL/health")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Backend is healthy! (HTTP $HTTP_CODE)"
               echo "HEALTH_CHECK=PASSED" >> $GITHUB_OUTPUT
               exit 0
             fi
-            echo "Attempt $i failed, waiting 10 seconds..."
+            echo "Attempt $i failed (HTTP $HTTP_CODE), waiting 10 seconds..."
             sleep 10
           done
           
           echo "HEALTH_CHECK=FAILED" >> $GITHUB_OUTPUT
-          echo "Backend health check failed after 10 attempts"
+          echo "Backend health check failed after 15 attempts"
 
       - name: Deployment Summary
         run: |
@@ -176,18 +137,23 @@ jobs:
             echo "✅ **Backend successfully deployed and healthy!**" >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ **Backend deployed but health check failed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Troubleshooting:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Check logs: \`az webapp log tail --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- May need 2-3 minutes for Python app to start" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Image Tag | \`${{ steps.build_image.outputs.IMAGE_TAG }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Web App Name | \`${{ env.AZURE_WEBAPP_NAME }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Backend URL | ${{ steps.get_url.outputs.WEBAPP_URL }} |" >> $GITHUB_STEP_SUMMARY
           echo "| API Endpoint | ${{ steps.get_url.outputs.WEBAPP_URL }}/api/v1 |" >> $GITHUB_STEP_SUMMARY
           echo "| Health Status | ${{ steps.test_health.outputs.HEALTH_CHECK }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deployment Method | Direct from GitHub Actions (Python runtime) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
-          echo "1. Configure GitHub Secret: \`BACKEND_CONTAINER_APP_URL\` = \`${{ steps.get_url.outputs.WEBAPP_URL }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "2. Redeploy frontend to use new backend URL" >> $GITHUB_STEP_SUMMARY
-          echo "3. Test: ${{ steps.get_url.outputs.WEBAPP_URL }}/api/v1/assessments/certifications" >> $GITHUB_STEP_SUMMARY
+          echo "1. Test backend: \`curl ${{ steps.get_url.outputs.WEBAPP_URL }}/health\`" >> $GITHUB_STEP_SUMMARY
+          echo "2. Configure GitHub Secret: \`BACKEND_CONTAINER_APP_URL\` = \`${{ steps.get_url.outputs.WEBAPP_URL }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Redeploy frontend to use new backend URL" >> $GITHUB_STEP_SUMMARY
+          echo "4. Test full API: ${{ steps.get_url.outputs.WEBAPP_URL }}/api/v1/assessments/certifications" >> $GITHUB_STEP_SUMMARY
