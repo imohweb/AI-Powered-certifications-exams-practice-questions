@@ -108,3 +108,5 @@ dmypy.json
 backend-logs.zip
 *.log
 LogFiles/
+webapp-logs-new.zip
+webapp-logs-new/
