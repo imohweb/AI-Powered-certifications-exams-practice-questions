@@ -107,3 +107,4 @@ dmypy.json
 .azure/LogFiles/
 backend-logs.zip
 *.log
+LogFiles/
