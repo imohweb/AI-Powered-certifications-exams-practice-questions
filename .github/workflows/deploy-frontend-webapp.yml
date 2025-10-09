@@ -100,6 +100,13 @@ jobs:
           CI: false
           NODE_OPTIONS: "--max_old_space_size=4096"
 
+      - name: Install production dependencies only
+        working-directory: ./frontend
+        run: |
+          # Remove dev dependencies and install only production deps
+          npm ci --production
+          echo "✅ Production dependencies installed"
+
       - name: Deploy to Azure Web App using az webapp up
         run: |
           cd frontend
