@@ -86,7 +86,7 @@ jobs:
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-              CORS_ORIGINS='["https://imohweb.github.io","https://frontend-ai-practice-questions-app.azurewebsites.net"]' \
+              CORS_ORIGINS='["https://imohweb.github.io","https://frontend-ai-practice-questions-app.azurewebsites.net","https://lively-dune-0486f060f.2.azurestaticapps.net"]' \
               AZURE_SPEECH_KEY="${{ secrets.AZURE_SPEECH_KEY }}" \
               AZURE_SPEECH_REGION="${{ secrets.AZURE_SPEECH_REGION }}" \
               AZURE_TRANSLATOR_KEY="${{ secrets.AZURE_TRANSLATOR_KEY }}" \
