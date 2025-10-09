@@ -64,7 +64,12 @@ jobs:
             --application-logging filesystem \
             --level information
 
-          # Configure startup command
+          # Configure startup command and enable build during deployment
+          az webapp config appsettings set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
           az webapp config set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
@@ -100,12 +105,17 @@ jobs:
           CI: false
           NODE_OPTIONS: "--max_old_space_size=4096"
 
-      - name: Install production dependencies only
+      - name: Prepare deployment package
         working-directory: ./frontend
         run: |
-          # Remove dev dependencies and install only production deps
-          npm ci --production
-          echo "✅ Production dependencies installed"
+          # Create a clean package.json with only runtime dependencies
+          cat package.json | grep -v '"react-scripts"' > package.temp.json
+          mv package.temp.json package-runtime.json
+          
+          # Keep only necessary files for deployment
+          echo "✅ Deployment package prepared"
+          echo "Contents: server.js, build/, package.json, node_modules/"
+          ls -la | grep -E "server.js|build|package.json|node_modules"
 
       - name: Deploy to Azure Web App using az webapp up
         run: |
