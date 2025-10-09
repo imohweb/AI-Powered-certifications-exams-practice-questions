@@ -44,11 +44,12 @@ jobs:
         if: steps.check_webapp.outputs.WEBAPP_EXISTS == 'false'
         run: |
           # Use the existing App Service Plan from backend
+          # Use NODE:20-lts for static files serving
           az webapp create \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --plan backend-ai-practice-plan \
-            --runtime "NODE:18-lts"
+            --runtime "NODE:20-lts"
           
           echo "✅ Web App created successfully"
 
@@ -62,6 +63,12 @@ jobs:
             --docker-container-logging filesystem \
             --application-logging filesystem \
             --level information
+
+          # Configure startup command
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --startup-file "npm run serve"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -95,13 +102,13 @@ jobs:
 
       - name: Deploy to Azure Web App using az webapp up
         run: |
-          cd frontend/build
+          cd frontend
           
-          # Deploy the built static files using az webapp up
+          # Deploy the frontend directory with server.js
           az webapp up \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --runtime "NODE:18-lts" \
+            --runtime "NODE:20-lts" \
             --sku B1 \
             --logs
 
