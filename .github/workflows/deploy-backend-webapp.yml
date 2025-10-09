@@ -95,19 +95,17 @@ jobs:
               AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
               AZURE_OPENAI_DEPLOYMENT_NAME="${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}"
 
-      - name: Deploy to Azure Web App using CLI
+      - name: Deploy to Azure Web App using az webapp up
         run: |
           cd backend
           
-          # Create a zip file for deployment
-          zip -r deploy.zip . -x "*.pyc" -x "__pycache__/*" -x ".git/*" -x "audio_cache/*" -x "translation_cache/*" -x "test-scripts/*"
-          
-          # Deploy using Azure CLI
-          az webapp deployment source config-zip \
+          # Deploy using az webapp up which handles build automatically
+          az webapp up \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --src deploy.zip \
-            --timeout 300
+            --runtime "PYTHON:3.11" \
+            --sku B1 \
+            --logs
 
       - name: Get Web App URL
         id: get_url
