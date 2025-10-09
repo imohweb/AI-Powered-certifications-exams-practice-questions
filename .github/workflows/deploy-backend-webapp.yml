@@ -91,9 +91,9 @@ jobs:
               AZURE_SPEECH_REGION="${{ secrets.AZURE_SPEECH_REGION }}" \
               AZURE_TRANSLATOR_KEY="${{ secrets.AZURE_TRANSLATOR_KEY }}" \
               AZURE_TRANSLATOR_REGION="${{ secrets.AZURE_TRANSLATOR_REGION }}" \
-              AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
+              AZURE_OPENAI_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
               AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
-              AZURE_OPENAI_DEPLOYMENT_NAME="${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}"
+              AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}"
 
       - name: Deploy to Azure Web App using az webapp up
         run: |
