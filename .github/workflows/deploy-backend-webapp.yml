@@ -74,6 +74,12 @@ jobs:
             --application-logging filesystem \
             --level information
 
+          # Configure startup command
+          az webapp config set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --startup-file "uvicorn main:app --host 0.0.0.0 --port 8000"
+
           # Set environment variables
           az webapp config appsettings set \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
