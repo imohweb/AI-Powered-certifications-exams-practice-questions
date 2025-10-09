@@ -120,7 +120,7 @@ jobs:
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
             --settings \
               WEBSITES_PORT=8000 \
-              CORS_ORIGINS="https://imohweb.github.io" \
+              CORS_ORIGINS="https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions" \
               AZURE_SPEECH_KEY="${{ secrets.AZURE_SPEECH_KEY }}" \
               AZURE_SPEECH_REGION="${{ secrets.AZURE_SPEECH_REGION }}" \
               AZURE_TRANSLATOR_KEY="${{ secrets.AZURE_TRANSLATOR_KEY }}" \
