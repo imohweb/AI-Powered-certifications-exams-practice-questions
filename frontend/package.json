@@ -2,7 +2,7 @@
   "name": "ms-cert-practice-frontend",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions",
+  "homepage": "https://lively-dune-0486f060f.2.azurestaticapps.net",
   "dependencies": {
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.42",
