@@ -46,21 +46,6 @@ app.include_router(assessments.router, prefix="/api/v1/assessments", tags=["asse
 app.include_router(audio.router, prefix="/api/v1/audio", tags=["audio"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 
-# Add API v1 health check endpoint
-@app.get("/api/v1")
-async def api_health_check():
-    """Health check endpoint for API v1."""
-    return {
-        "message": "Microsoft Certification Practice Assessment API v1",
-        "version": "1.0.0",
-        "status": "healthy",
-        "endpoints": {
-            "assessments": "/api/v1/assessments/certifications",
-            "audio": "/api/v1/audio/",
-            "sessions": "/api/v1/sessions/"
-        }
-    }
-
 # Mount static files for audio serving at /api/v1/audio-files (after routers to avoid conflicts)
 audio_cache_path = Path(settings.audio_cache_dir)
 if audio_cache_path.exists():
@@ -161,6 +146,21 @@ async def health_check():
         }
     }
 
+
+# API endpoints for health checks
+@app.get("/api/v1/health")
+async def api_health_check():
+    """Health check endpoint for API v1."""
+    return {
+        "message": "Microsoft Certification Practice Assessment API v1",
+        "version": "1.0.0",
+        "status": "healthy",
+        "endpoints": {
+            "assessments": "/api/v1/assessments/certifications",
+            "audio": "/api/v1/audio/",
+            "sessions": "/api/v1/sessions/"
+        }
+    }
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
