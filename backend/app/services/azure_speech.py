@@ -208,7 +208,7 @@ class AzureSpeechService:
             )
             
             audio_filename = f"{cache_key}.mp3"
-            audio_url = f"/audio-files/{audio_filename}"
+            audio_url = f"/api/v1/audio-files/{audio_filename}"
             
             # Estimate duration (rough calculation)
             # Average speaking rate is about 150-200 words per minute
