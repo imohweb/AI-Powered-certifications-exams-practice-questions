@@ -23,6 +23,21 @@ router = APIRouter()
 ai_agent = QuestionFlowAgent()
 
 
+@router.get("/")
+async def sessions_health_check():
+    """Health check endpoint for sessions service."""
+    return {
+        "service": "sessions",
+        "status": "healthy",
+        "endpoints": {
+            "start": "POST /api/v1/sessions/start",
+            "progress": "GET /api/v1/sessions/{session_id}/progress",
+            "submit": "POST /api/v1/sessions/{session_id}/submit",
+            "summary": "GET /api/v1/sessions/{session_id}/summary"
+        }
+    }
+
+
 @router.post("/start", response_model=UserSession)
 async def start_session(
     certification_code: str,

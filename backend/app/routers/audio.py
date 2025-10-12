@@ -23,6 +23,22 @@ router = APIRouter()
 ai_agent = QuestionFlowAgent()
 
 
+@router.get("/")
+async def audio_health_check():
+    """Health check endpoint for audio service."""
+    return {
+        "service": "audio",
+        "status": "healthy",
+        "azure_speech_configured": bool(settings.azure_speech_key and settings.azure_speech_region),
+        "endpoints": {
+            "generate": "POST /api/v1/audio/generate",
+            "voices": "GET /api/v1/audio/voices",
+            "play": "GET /api/v1/audio/play/{filename}",
+            "transcribe": "POST /api/v1/audio/transcribe"
+        }
+    }
+
+
 # Dependency to get Azure Speech Service
 async def get_speech_service() -> AzureSpeechService:
     """Dependency to provide Azure Speech Service instance."""
