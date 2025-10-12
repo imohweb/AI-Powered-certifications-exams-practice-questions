@@ -358,6 +358,98 @@ const AssessmentPage = ({
     return languageMap[languageCode] || 'en-US';
   };
 
+  // Multilingual voice command patterns
+  const getVoiceCommandPatterns = (languageCode: string) => {
+    const patterns: { [key: string]: any } = {
+      'en': {
+        stopReading: ['stop reading', 'stop', 'pause', 'quiet'],
+        readQuestion: ['read question', 'read the question', 'read this question', 'repeat question', 'say question'],
+        checkAnswer: ['check answer', 'check my answer', 'verify answer', 'submit answer'],
+        nextQuestion: ['next question', 'next'],
+        previousQuestion: ['previous question', 'previous'],
+        optionPatterns: [
+          /(?:option|answer|choice)\s*(?:number\s*)?([abcdef]|\d+)/i,
+          /(?:select|pick|choose)\s*(?:option|answer|choice)?\s*(?:number\s*)?([abcdef]|\d+)/i,
+          /(?:number|#)\s*(\d+)/i,
+          /^([abcdef]|\d+)$/i,
+          /letter\s*([abcdef])/i
+        ]
+      },
+      'es': {
+        stopReading: ['parar', 'detener', 'pausa', 'silencio', 'para', 'stop'],
+        readQuestion: ['leer pregunta', 'lee la pregunta', 'repetir pregunta', 'decir pregunta'],
+        checkAnswer: ['verificar respuesta', 'comprobar respuesta', 'revisar respuesta'],
+        nextQuestion: ['siguiente pregunta', 'siguiente', 'próxima pregunta'],
+        previousQuestion: ['pregunta anterior', 'anterior', 'pregunta previa'],
+        optionPatterns: [
+          /(?:opción|respuesta|alternativa)\s*(?:número\s*)?([abcdef]|\d+)/i,
+          /(?:seleccionar|elegir|escoger)\s*(?:opción|respuesta)?\s*(?:número\s*)?([abcdef]|\d+)/i,
+          /(?:número|#)\s*(\d+)/i,
+          /^([abcdef]|\d+)$/i,
+          /letra\s*([abcdef])/i
+        ]
+      },
+      'fr': {
+        stopReading: ['arrêter', 'stop', 'pause', 'silence', 'arrête'],
+        readQuestion: ['lire question', 'lis la question', 'répéter question', 'dire question'],
+        checkAnswer: ['vérifier réponse', 'contrôler réponse', 'valider réponse'],
+        nextQuestion: ['question suivante', 'suivant', 'prochaine question'],
+        previousQuestion: ['question précédente', 'précédent', 'question avant'],
+        optionPatterns: [
+          /(?:option|réponse|choix)\s*(?:numéro\s*)?([abcdef]|\d+)/i,
+          /(?:sélectionner|choisir)\s*(?:option|réponse)?\s*(?:numéro\s*)?([abcdef]|\d+)/i,
+          /(?:numéro|#)\s*(\d+)/i,
+          /^([abcdef]|\d+)$/i,
+          /lettre\s*([abcdef])/i
+        ]
+      },
+      'de': {
+        stopReading: ['stoppen', 'anhalten', 'pause', 'ruhe', 'stop'],
+        readQuestion: ['frage lesen', 'lies die frage', 'frage wiederholen', 'frage sagen'],
+        checkAnswer: ['antwort prüfen', 'antwort überprüfen', 'antwort kontrollieren'],
+        nextQuestion: ['nächste frage', 'weiter', 'nächste'],
+        previousQuestion: ['vorherige frage', 'zurück', 'vorherige'],
+        optionPatterns: [
+          /(?:option|antwort|auswahl)\s*(?:nummer\s*)?([abcdef]|\d+)/i,
+          /(?:wählen|auswählen)\s*(?:option|antwort)?\s*(?:nummer\s*)?([abcdef]|\d+)/i,
+          /(?:nummer|#)\s*(\d+)/i,
+          /^([abcdef]|\d+)$/i,
+          /buchstabe\s*([abcdef])/i
+        ]
+      },
+      'it': {
+        stopReading: ['fermare', 'stop', 'pausa', 'silenzio', 'basta'],
+        readQuestion: ['leggi domanda', 'leggere la domanda', 'ripetere domanda', 'dire domanda'],
+        checkAnswer: ['controllare risposta', 'verificare risposta', 'validare risposta'],
+        nextQuestion: ['prossima domanda', 'avanti', 'domanda successiva'],
+        previousQuestion: ['domanda precedente', 'indietro', 'domanda prima'],
+        optionPatterns: [
+          /(?:opzione|risposta|scelta)\s*(?:numero\s*)?([abcdef]|\d+)/i,
+          /(?:selezionare|scegliere)\s*(?:opzione|risposta)?\s*(?:numero\s*)?([abcdef]|\d+)/i,
+          /(?:numero|#)\s*(\d+)/i,
+          /^([abcdef]|\d+)$/i,
+          /lettera\s*([abcdef])/i
+        ]
+      },
+      'pt': {
+        stopReading: ['parar', 'stop', 'pausa', 'silêncio', 'para'],
+        readQuestion: ['ler pergunta', 'leia a pergunta', 'repetir pergunta', 'dizer pergunta'],
+        checkAnswer: ['verificar resposta', 'conferir resposta', 'validar resposta'],
+        nextQuestion: ['próxima pergunta', 'próximo', 'pergunta seguinte'],
+        previousQuestion: ['pergunta anterior', 'anterior', 'pergunta prévia'],
+        optionPatterns: [
+          /(?:opção|resposta|alternativa)\s*(?:número\s*)?([abcdef]|\d+)/i,
+          /(?:selecionar|escolher)\s*(?:opção|resposta)?\s*(?:número\s*)?([abcdef]|\d+)/i,
+          /(?:número|#)\s*(\d+)/i,
+          /^([abcdef]|\d+)$/i,
+          /letra\s*([abcdef])/i
+        ]
+      }
+    };
+    
+    return patterns[languageCode] || patterns['en']; // Default to English if language not supported
+  };
+
   // Get current question state
   const getCurrentQuestionState = useCallback((): QuestionState => {
     return questionStates.get(currentQuestionIndex) || {
@@ -848,25 +940,26 @@ const AssessmentPage = ({
     
     console.log('Voice command received:', transcript);
     
+    // Get current language patterns
+    const commandPatterns = getVoiceCommandPatterns(selectedLanguage);
+    
     // Normalize transcript for better matching
     const normalizedTranscript = transcript.toLowerCase().trim();
     
+    // Helper function to check if transcript contains any of the given patterns
+    const containsAnyPattern = (patterns: string[]) => {
+      return patterns.some(pattern => normalizedTranscript.includes(pattern));
+    };
+    
     // Check for "stop reading" command FIRST (before any other command)
-    if (normalizedTranscript.includes('stop reading') || 
-        normalizedTranscript.includes('stop') ||
-        normalizedTranscript.includes('pause') ||
-        normalizedTranscript.includes('quiet')) {
+    if (containsAnyPattern(commandPatterns.stopReading)) {
       stopReading();
       onSuccess('Stopped reading');
       return;
     }
     
     // Check for "read question" command
-    if (normalizedTranscript.includes('read question') || 
-        normalizedTranscript.includes('read the question') ||
-        normalizedTranscript.includes('read this question') ||
-        normalizedTranscript.includes('repeat question') ||
-        normalizedTranscript.includes('say question')) {
+    if (containsAnyPattern(commandPatterns.readQuestion)) {
       // Stop any current reading before starting new one
       if (isReading) {
         stopReading();
@@ -876,18 +969,14 @@ const AssessmentPage = ({
     }
 
     // Check for "check answer" command BEFORE "next question" to avoid confusion
-    if (normalizedTranscript.includes('check answer') || 
-        normalizedTranscript.includes('check my answer') ||
-        normalizedTranscript.includes('verify answer') ||
-        normalizedTranscript.includes('submit answer')) {
+    if (containsAnyPattern(commandPatterns.checkAnswer)) {
       // Use the existing checkAnswer function to avoid duplicate logic
       await checkAnswer();
       return;
     }
     
     // Check for "next question" command
-    if (normalizedTranscript.includes('next question') || 
-        (normalizedTranscript.includes('next') && normalizedTranscript.includes('question'))) {
+    if (containsAnyPattern(commandPatterns.nextQuestion)) {
       const currentState = getCurrentQuestionState();
       
       if (!currentState.isAnswered) {
@@ -920,8 +1009,7 @@ const AssessmentPage = ({
     }
 
     // Check for "previous question" command
-    if (normalizedTranscript.includes('previous question') || 
-        (normalizedTranscript.includes('previous') && normalizedTranscript.includes('question'))) {
+    if (containsAnyPattern(commandPatterns.previousQuestion)) {
       if (currentQuestionIndex > 0) {
         const prevIndex = currentQuestionIndex - 1;
         setCurrentQuestionIndex(prevIndex);
@@ -943,18 +1031,17 @@ const AssessmentPage = ({
     const currentQuestion = assessment.questions[currentQuestionIndex];
     let optionNumber = -1;
     
-    // Try different patterns to match options
-    const patterns = [
-      /(?:option|answer|choice)\s*(?:number\s*)?(\d+)/i,
-      /(?:select|pick|choose)\s*(?:option|answer|choice)?\s*(?:number\s*)?(\d+)/i,
-      /(?:number|#)\s*(\d+)/i,
-      /^(\d+)$/i, // Just a number
-    ];
-    
-    for (const pattern of patterns) {
+    // Try multilingual patterns to match options
+    for (const pattern of commandPatterns.optionPatterns) {
       const match = normalizedTranscript.match(pattern);
       if (match) {
-        optionNumber = parseInt(match[1]) - 1; // Convert to 0-based index
+        const captured = match[1];
+        // Handle both letters (a,b,c,d,e,f) and numbers (1,2,3,4,5,6)
+        if (/^[abcdef]$/i.test(captured)) {
+          optionNumber = captured.toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+        } else {
+          optionNumber = parseInt(captured) - 1; // Convert to 0-based index
+        }
         console.log(`Matched option pattern: ${pattern}, option number: ${optionNumber + 1}`);
         break;
       }
