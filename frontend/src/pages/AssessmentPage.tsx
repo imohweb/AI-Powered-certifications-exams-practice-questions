@@ -38,7 +38,7 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppState, PracticeAssessment, QuestionType } from '../types';
-import { assessmentApi, audioApi, handleApiError } from '../services/api';
+import { assessmentApi, audioApi, handleApiError, buildAudioUrl } from '../services/api';
 
 interface QuestionState {
   selectedAnswers: string[];
@@ -571,7 +571,7 @@ const AssessmentPage = ({
         }
 
         // Play the generated audio
-        const audio = new Audio(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}${audioResponse.audio_url}`);
+        const audio = new Audio(buildAudioUrl(audioResponse.audio_url));
         currentAudioRef.current = audio; // Store reference for stopping
         
         audio.onended = () => {
@@ -659,7 +659,7 @@ const AssessmentPage = ({
         }
 
         // Play the generated audio
-        const audio = new Audio(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000'}${audioResponse.audio_url}`);
+        const audio = new Audio(buildAudioUrl(audioResponse.audio_url));
         currentAudioRef.current = audio; // Store reference for stopping
         
         audio.onended = () => {
