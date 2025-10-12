@@ -39,12 +39,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     secret_key: str = "your-secret-key-change-in-production"
     
-    # CORS - Updated for Azure Static Web App deployment
-    # Updated: 2025-10-12 - Azure Static Web App URL for frontend
+    # CORS - Updated for Azure Static Web App and GitHub Pages deployment
+    # Updated: 2025-10-13 - Added GitHub Pages URL for dual deployment support
     cors_origins: List[str] = [
-        "https://lively-dune-0486f060f.2.azurestaticapps.net",
-        "http://localhost:3000",  # For local development
-        "http://127.0.0.1:3000",  # Alternative localhost
+        "https://lively-dune-0486f060f.2.azurestaticapps.net",  # Azure Static Web App
+        "https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions",  # GitHub Pages (specific project path)
+        "http://localhost:3001",  # For local development (frontend runs on port 3001)
+        "http://127.0.0.1:3001",  # Alternative localhost
     ]
     
     # Rate Limiting

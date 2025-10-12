@@ -1,0 +1,104 @@
+name: Deploy Frontend to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend-github-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: 
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Create .env file for GitHub Pages
+        working-directory: ./frontend
+        run: |
+          # Use the same backend URL as Azure Static Web App
+          BACKEND_URL="${{ secrets.BACKEND_APP_URL }}"
+          API_URL="${BACKEND_URL}/api/v1"
+          
+          echo "REACT_APP_API_URL=${API_URL}" > .env
+          echo "REACT_APP_ENV=production" >> .env
+          echo "REACT_APP_DEPLOYMENT_TARGET=github-pages" >> .env
+          
+          echo "GitHub Pages frontend will connect to: ${API_URL}"
+
+      - name: Update package.json homepage for GitHub Pages
+        working-directory: ./frontend
+        run: |
+          # Update the homepage URL to point to GitHub Pages
+          npm pkg set homepage="https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions/"
+          echo "Updated homepage URL for GitHub Pages deployment"
+
+      - name: Build frontend for GitHub Pages
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          CI: false
+          NODE_OPTIONS: "--max_old_space_size=4096"
+          PUBLIC_URL: /AI-Powered-certifications-exams-practice-questions
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/build
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🎉 Frontend Deployment to GitHub Pages" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Status: ✅ Deployed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Pages**: https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions/" >> $GITHUB_STEP_SUMMARY
+          echo "- **Azure Static Web App**: https://lively-dune-0486f060f.2.azurestaticapps.net" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Backend API" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ secrets.BACKEND_APP_URL }}/api/v1" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. ✅ Frontend deployed to GitHub Pages" >> $GITHUB_STEP_SUMMARY
+          echo "2. ⚠️ Update backend CORS to include GitHub Pages URL: https://imohweb.github.io" >> $GITHUB_STEP_SUMMARY
+          echo "3. 🧪 Test the frontend at GitHub Pages URL" >> $GITHUB_STEP_SUMMARY
+          echo "4. 🌟 GitHub Pages is free and allows for community contributions!" >> $GITHUB_STEP_SUMMARY
