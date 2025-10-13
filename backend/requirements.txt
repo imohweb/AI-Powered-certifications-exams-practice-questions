@@ -26,6 +26,7 @@ python-dotenv==1.0.0
 
 # Async support
 aiofiles==23.2.0
+aiohttp==3.9.1
 
 # Testing (optional - not needed in production)
 pytest==7.4.3

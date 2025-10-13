@@ -1,6 +1,7 @@
 """
-Main FastAPI application with Azure Speech Service integration.
-Redeployed: 2025-10-13 - Fixed Azure Translator Service configuration
+# Main FastAPI application for Microsoft certification practice assessments
+# Created: 2024-10-08
+# Last Updated: 2025-10-13 - Fixed missing aiohttp dependency for Azure Translator Service
 """
 
 from fastapi import FastAPI, HTTPException, Depends
