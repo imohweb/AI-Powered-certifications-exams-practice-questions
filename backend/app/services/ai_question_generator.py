@@ -130,15 +130,15 @@ class SimplifiedAIQuestionGenerator:
             
             logger.info(f"Successfully generated {len(questions)} questions")
             
-            # Create assessment object
+            # Create assessment object with larger question pool
             assessment = PracticeAssessment(
                 id=f"assessment_{certification_code.lower()}_{uuid.uuid4().hex[:8]}",
                 certification_code=certification_code,
                 title=f"Practice Assessment - {certification_title}",
-                description=f"AI-generated practice questions for {certification_title}",
+                description=f"AI-generated practice questions for {certification_title} (100 question pool for randomization)",
                 questions=questions,
                 total_questions=len(questions),
-                estimated_duration_minutes=len(questions) * 2  # 2 minutes per question for 50 questions = 100 minutes
+                estimated_duration_minutes=50 * 2  # Based on 50 questions per session, not total pool
             )
             
             logger.info(f"✅ Successfully created assessment with {len(questions)} questions for {certification_code}")
@@ -207,26 +207,29 @@ class SimplifiedAIQuestionGenerator:
             return ""
     
     def _create_question_generation_prompt(self, certification_code: str, certification_title: str) -> str:
-        """Create a detailed prompt for AI question generation."""
+        """Create a detailed prompt for AI question generation with larger pool for randomization."""
         
         # Get certification-specific context
         context = self._get_certification_context(certification_code)
         
         prompt = f"""
-Generate 50 realistic practice exam questions for the Microsoft certification: {certification_title} ({certification_code}).
+Generate 100 realistic practice exam questions for the Microsoft certification: {certification_title} ({certification_code}).
 
 These questions should be based on the official Microsoft Learn practice assessments available at:
 https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications
 
 {context}
 
+Purpose: Create a large question pool to enable randomization similar to Microsoft's official practice tests where each retake shows different questions.
+
 Requirements:
-- Generate exactly 50 questions covering all exam domains
+- Generate exactly 100 questions covering all exam domains (larger pool for question rotation)
 - Questions should match the style and difficulty of official Microsoft practice assessments
-- Include a variety of difficulty levels: 15 beginner, 25 intermediate, 10 advanced
-- Cover all major domains and skills measured in the {certification_code} exam
+- Include a variety of difficulty levels: 30 beginner, 50 intermediate, 20 advanced
+- Cover all major domains and skills measured in the {certification_code} exam multiple times
 - Use realistic scenarios that professionals encounter
 - Include technical details and specific Microsoft product knowledge
+- Ensure variety so users get different questions on retakes (like Microsoft practice tests)
 
 For each question, provide:
 1. A clear, technical question text (similar to official Microsoft exams)
@@ -248,12 +251,13 @@ Explanation: [technical explanation with reasoning]
 Difficulty: [beginner/intermediate/advanced]
 Topics: [domain1, domain2, skill area]
 
-Continue for all 50 questions. Ensure questions cover:
-- All major exam domains proportionally
-- Real-world scenarios
+Continue for all 100 questions. Ensure questions cover:
+- All major exam domains proportionally with multiple variations
+- Real-world scenarios with different contexts
 - Microsoft-specific terminology and concepts
 - Current technology and best practices
 - Hands-on implementation knowledge
+- Different angles of the same concepts for variety
 """
         
         return prompt

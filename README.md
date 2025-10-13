@@ -380,4 +380,4 @@ SOFTWARE.
 
 ---
 
-**Made with ❤️ by the community | Powered by Azure AI Services**
+**Made with ❤️ for the community | Powered by Azure AI Services**
