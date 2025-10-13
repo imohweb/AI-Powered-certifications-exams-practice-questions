@@ -194,12 +194,14 @@ def get_translator_service() -> Optional[AzureTranslatorService]:
     
     if _translator_service is None:
         if (settings.azure_translator_key and 
-            settings.azure_translator_endpoint and 
             settings.azure_translator_region):
+            
+            # Use provided endpoint or default to standard Microsoft Translator endpoint
+            endpoint = settings.azure_translator_endpoint or "https://api.cognitive.microsofttranslator.com/"
             
             _translator_service = AzureTranslatorService(
                 translator_key=settings.azure_translator_key,
-                translator_endpoint=settings.azure_translator_endpoint,
+                translator_endpoint=endpoint,
                 translator_region=settings.azure_translator_region
             )
             logger.info("✅ Azure Translator Service initialized")
