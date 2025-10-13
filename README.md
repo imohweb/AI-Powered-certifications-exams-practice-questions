@@ -21,7 +21,8 @@ An open-source AI-powered voice assistant application that provides interactive,
 ## Features
 
 - 🎯 **Official Practice Questions**: Sources authentic practice questions from [Microsoft Learn's Official Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)
-- 🗣️ **Azure Speech Service**: Multilingual text-to-speech functionality for hands-free learning
+- � **Microsoft-Style Question Randomization**: Mimics official Microsoft practice tests with question rotation, answer shuffling, and fresh questions on retakes
+- �🗣️ **Azure Speech Service**: Multilingual text-to-speech functionality for hands-free learning
 - 🌍 **Multilingual Support**: Practice in multiple languages with voice synthesis
 - 🤖 **AI Agent**: Smart question management and automatic progression
 - 📱 **Responsive UI**: Modern React frontend with intuitive voice and mouse controls
@@ -167,6 +168,26 @@ The application currently supports practice assessments for 50+ Microsoft certif
 - And many more...
 
 > **📚 Content Source**: All questions are automatically extracted from Microsoft Learn's official practice assessment platform, maintaining the highest quality and accuracy standards set by Microsoft.
+
+## 🔀 Microsoft-Style Question Randomization
+
+This application replicates the **exact same behavior** as Microsoft's official practice tests, where each retake presents different questions:
+
+### **How It Works (Just Like Microsoft)**
+- ✅ **Question Pool**: 100+ questions generated per certification (larger pool)
+- ✅ **Session Selection**: 50 random questions selected per practice session
+- ✅ **Answer Shuffling**: Answer options randomized for each session
+- ✅ **Fresh Retakes**: Different questions appear when you retake the same certification
+- ✅ **Difficulty Balance**: Maintains proper distribution (30% easy, 50% medium, 20% hard)
+- ✅ **Smart Rotation**: Avoids immediate repeats while ensuring variety
+
+### **Benefits**
+- 🎯 **Realistic Preparation**: Matches the actual Microsoft practice test experience
+- 🧠 **Better Learning**: Prevents memorization, encourages real understanding
+- 🔄 **Retake Value**: Each practice session provides fresh questions and perspectives
+- 📊 **Comprehensive Coverage**: All exam domains covered across multiple sessions
+
+> **🎖️ Microsoft Certification Alignment**: This randomization system mirrors Microsoft's official practice assessment behavior, giving you the most authentic preparation experience possible.
 
 ### AWS (Contributions Welcome!)
 We're looking for contributors to add official AWS certification practice questions:
