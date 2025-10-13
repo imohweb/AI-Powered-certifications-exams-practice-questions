@@ -20,7 +20,7 @@ An open-source AI-powered voice assistant application that provides interactive,
 
 ## Features
 
-- 🎯 **Automated Web Crawling**: Extracts practice questions from certification provider learning platforms
+- 🎯 **Official Practice Questions**: Sources authentic practice questions from [Microsoft Learn's Official Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)
 - 🗣️ **Azure Speech Service**: Multilingual text-to-speech functionality for hands-free learning
 - 🌍 **Multilingual Support**: Practice in multiple languages with voice synthesis
 - 🤖 **AI Agent**: Smart question management and automatic progression
@@ -154,6 +154,9 @@ Automated deployment via GitHub Actions:
 ## Available Certifications
 
 ### Microsoft Azure
+
+All Microsoft Azure practice questions are sourced from **[Microsoft Learn's Official Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)**, ensuring authenticity and alignment with actual certification exams.
+
 The application currently supports practice assessments for 50+ Microsoft certifications including:
 - Azure Fundamentals (AZ-900)
 - Azure Administrator (AZ-104)
@@ -162,6 +165,8 @@ The application currently supports practice assessments for 50+ Microsoft certif
 - Azure DevOps (AZ-400)
 - Azure Security (AZ-500)
 - And many more...
+
+> **📚 Content Source**: All questions are automatically extracted from Microsoft Learn's official practice assessment platform, maintaining the highest quality and accuracy standards set by Microsoft.
 
 ### AWS (Contributions Welcome!)
 We're looking for contributors to add official AWS certification practice questions:
@@ -273,8 +278,10 @@ We welcome contributions from the community! Whether you want to add practice qu
 If you're adding practice questions for AWS or Google Cloud:
 
 1. **Source Official Questions Only**
-   - Use only official practice questions from AWS or GCP learning platforms
-   - Document the source URL in your PR
+   - ✅ **Microsoft**: All questions sourced from [Microsoft Learn's Official Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)
+   - 🔍 **AWS**: Use only official practice questions from AWS learning platforms or official AWS practice exams
+   - 🔍 **GCP**: Use only official practice questions from Google Cloud learning platforms or official GCP practice exams
+   - Document the source URL in your PR and ensure it's from the official certification provider
 
 2. **Follow Existing Data Structure**
    - Review the existing Microsoft Azure implementation
@@ -359,9 +366,9 @@ SOFTWARE.
 
 ## 🙏 Acknowledgments
 
-- Microsoft Learn for official practice assessments
-- Azure AI Services for speech and translation capabilities
-- All contributors who help expand this project to AWS and GCP
+- **[Microsoft Learn Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)** for providing official, high-quality practice questions that ensure authentic certification preparation
+- **Azure AI Services** for speech synthesis and translation capabilities that enable multilingual learning
+- **All contributors** who help expand this project to AWS and GCP certifications
 
 ## 📊 Project Stats
 
