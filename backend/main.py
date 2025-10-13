@@ -1,6 +1,6 @@
 """
 Main FastAPI application with Azure Speech Service integration.
-Redeployed: 2025-10-08
+Redeployed: 2025-10-13 - Fixed Azure Translator Service configuration
 """
 
 from fastapi import FastAPI, HTTPException, Depends
