@@ -1,7 +1,7 @@
 # AI-Powered Certification Practice Assessments - Voice Assistant
 
-[![Deploy Backend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend.yml)
-[![Deploy Frontend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend.yml)
+[![Deploy Backend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend-webapp.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend-webapp.yml)
+[![Deploy Frontend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend-github-pages.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend-github-pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An open-source AI-powered voice assistant application that provides interactive, hands-free learning experiences for cloud certification exams with multilingual text-to-speech capabilities.
@@ -20,8 +20,9 @@ An open-source AI-powered voice assistant application that provides interactive,
 
 ## Features
 
-- 🎯 **Automated Web Crawling**: Extracts practice questions from certification provider learning platforms
-- 🗣️ **Azure Speech Service**: Multilingual text-to-speech functionality for hands-free learning
+- 🎯 **Official Practice Questions**: Sources authentic practice questions from [Microsoft Learn's Official Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)
+- � **Microsoft-Style Question Randomization**: Mimics official Microsoft practice tests with question rotation, answer shuffling, and fresh questions on retakes
+- �🗣️ **Azure Speech Service**: Multilingual text-to-speech functionality for hands-free learning
 - 🌍 **Multilingual Support**: Practice in multiple languages with voice synthesis
 - 🤖 **AI Agent**: Smart question management and automatic progression
 - 📱 **Responsive UI**: Modern React frontend with intuitive voice and mouse controls
@@ -108,6 +109,8 @@ AZURE_SPEECH_KEY=your_speech_service_key
 AZURE_SPEECH_REGION=your_speech_service_region
 AZURE_TRANSLATOR_KEY=your_translator_service_key
 AZURE_TRANSLATOR_REGION=your_translator_service_region
+AZURE_OPENAI_API_KEY=your_openai_service_key
+AZURE_OPENAI_ENDPOINT=your_openai_service_endpoint
 ```
 
 ### Running the Application
@@ -129,7 +132,7 @@ npm start
 ### Production Deployment
 
 The application is designed for production deployment with:
-- **Backend**: Azure Container Apps
+- **Backend**: Azure App Service (Web App)
 - **Frontend**: GitHub Pages
 
 📚 **Deployment Documentation**:
@@ -139,19 +142,22 @@ The application is designed for production deployment with:
 ### Live Application
 
 - **Frontend**: https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions/
-- **Backend**: Deployed on Azure Container Apps
+- **Backend API**: https://backend-ai-practice-questions-app.azurewebsites.net/
 
 ### CI/CD Pipeline
 
 Automated deployment via GitHub Actions:
-- Backend automatically deploys to Azure Container Apps on push to `main`
+- Backend automatically deploys to Azure App Service on push to `main`
 - Frontend automatically deploys to GitHub Pages on push to `main`
-- Docker images versioned with build numbers for easy rollback
-- All secrets managed via GitHub Secrets (no hardcoded credentials)
+- Environment variables and secrets managed via GitHub Secrets and Azure App Service Configuration
+- All credentials secured (no hardcoded secrets)
 
 ## Available Certifications
 
 ### Microsoft Azure
+
+All Microsoft Azure practice questions are sourced from **[Microsoft Learn's Official Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)**, ensuring authenticity and alignment with actual certification exams.
+
 The application currently supports practice assessments for 50+ Microsoft certifications including:
 - Azure Fundamentals (AZ-900)
 - Azure Administrator (AZ-104)
@@ -160,6 +166,28 @@ The application currently supports practice assessments for 50+ Microsoft certif
 - Azure DevOps (AZ-400)
 - Azure Security (AZ-500)
 - And many more...
+
+> **📚 Content Source**: All questions are automatically extracted from Microsoft Learn's official practice assessment platform, maintaining the highest quality and accuracy standards set by Microsoft.
+
+## 🔀 Microsoft-Style Question Randomization
+
+This application replicates the **exact same behavior** as Microsoft's official practice tests, where each retake presents different questions:
+
+### **How It Works (Just Like Microsoft)**
+- ✅ **Question Pool**: 100+ questions generated per certification (larger pool)
+- ✅ **Session Selection**: 50 random questions selected per practice session
+- ✅ **Answer Shuffling**: Answer options randomized for each session
+- ✅ **Fresh Retakes**: Different questions appear when you retake the same certification
+- ✅ **Difficulty Balance**: Maintains proper distribution (30% easy, 50% medium, 20% hard)
+- ✅ **Smart Rotation**: Avoids immediate repeats while ensuring variety
+
+### **Benefits**
+- 🎯 **Realistic Preparation**: Matches the actual Microsoft practice test experience
+- 🧠 **Better Learning**: Prevents memorization, encourages real understanding
+- 🔄 **Retake Value**: Each practice session provides fresh questions and perspectives
+- 📊 **Comprehensive Coverage**: All exam domains covered across multiple sessions
+
+> **🎖️ Microsoft Certification Alignment**: This randomization system mirrors Microsoft's official practice assessment behavior, giving you the most authentic preparation experience possible.
 
 ### AWS (Contributions Welcome!)
 We're looking for contributors to add official AWS certification practice questions:
@@ -271,8 +299,10 @@ We welcome contributions from the community! Whether you want to add practice qu
 If you're adding practice questions for AWS or Google Cloud:
 
 1. **Source Official Questions Only**
-   - Use only official practice questions from AWS or GCP learning platforms
-   - Document the source URL in your PR
+   - ✅ **Microsoft**: All questions sourced from [Microsoft Learn's Official Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)
+   - 🔍 **AWS**: Use only official practice questions from AWS learning platforms or official AWS practice exams
+   - 🔍 **GCP**: Use only official practice questions from Google Cloud learning platforms or official GCP practice exams
+   - Document the source URL in your PR and ensure it's from the official certification provider
 
 2. **Follow Existing Data Structure**
    - Review the existing Microsoft Azure implementation
@@ -357,9 +387,9 @@ SOFTWARE.
 
 ## 🙏 Acknowledgments
 
-- Microsoft Learn for official practice assessments
-- Azure AI Services for speech and translation capabilities
-- All contributors who help expand this project to AWS and GCP
+- **[Microsoft Learn Practice Assessments](https://learn.microsoft.com/en-us/credentials/certifications/practice-assessments-for-microsoft-certifications)** for providing official, high-quality practice questions that ensure authentic certification preparation
+- **Azure AI Services** for speech synthesis and translation capabilities that enable multilingual learning
+- **All contributors** who help expand this project to AWS and GCP certifications
 
 ## 📊 Project Stats
 
@@ -371,4 +401,4 @@ SOFTWARE.
 
 ---
 
-**Made with ❤️ by the community | Powered by Azure AI Services**
+**Made with ❤️ for the community | Powered by Azure AI Services**

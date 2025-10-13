@@ -396,7 +396,9 @@ export const handleApiError = (error: any): string => {
  * Helper function to build audio URL
  */
 export const buildAudioUrl = (audioPath: string): string => {
-  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+  // Use the same base URL as API calls, but remove /api/v1 suffix for audio files
+  const apiBaseUrl = process.env.REACT_APP_API_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api/v1';
+  const baseUrl = apiBaseUrl.replace('/api/v1', '');
   return `${baseUrl}${audioPath}`;
 };
 

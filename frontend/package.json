@@ -2,7 +2,7 @@
   "name": "ms-cert-practice-frontend",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions",
+  "homepage": "https://lively-dune-0486f060f.2.azurestaticapps.net",
   "dependencies": {
     "@types/node": "^16.18.68",
     "@types/react": "^18.2.42",
@@ -12,6 +12,7 @@
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "axios": "^1.6.2",
+    "express": "^4.18.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
@@ -23,7 +24,8 @@
     "start": "PORT=3001 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "serve": "node server.js"
   },
   "eslintConfig": {
     "extends": [

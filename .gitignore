@@ -104,4 +104,13 @@ audio_cache/
 dmypy.json
 
 # Azure
-.azure/
+.azure/LogFiles/
+backend-logs.zip
+*.log
+LogFiles/
+webapp-logs-new.zip
+webapp-logs-new/
+webapp-logs-latest.zip
+webapp-logs-latest/
+frontend-logs.zip
+frontend-logs/

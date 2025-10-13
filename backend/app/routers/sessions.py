@@ -5,6 +5,19 @@ Handles session creation, question progression, answer submission, and analytics
 
 import logging
 import uuid
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
+
+from app.models.schemas import (
+    UserSession, UserAnswer, SessionProgress, ApiResponse,
+    PracticeAssessment
+)
+from app.services.ai_agent import QuestionFlowAgent
+from app.services.question_randomizer import question_randomizer
+
+import logging
+import uuid
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
@@ -23,20 +36,39 @@ router = APIRouter()
 ai_agent = QuestionFlowAgent()
 
 
+@router.get("/")
+async def sessions_health_check():
+    """Health check endpoint for sessions service."""
+    return {
+        "service": "sessions",
+        "status": "healthy",
+        "endpoints": {
+            "start": "POST /api/v1/sessions/start",
+            "progress": "GET /api/v1/sessions/{session_id}/progress",
+            "submit": "POST /api/v1/sessions/{session_id}/submit",
+            "summary": "GET /api/v1/sessions/{session_id}/summary"
+        }
+    }
+
+
 @router.post("/start", response_model=UserSession)
 async def start_session(
     certification_code: str,
-    auto_progression: bool = True
+    auto_progression: bool = True,
+    randomize_questions: bool = True,
+    questions_per_session: int = 50
 ):
     """
-    Start a new practice session for a certification.
+    Start a new practice session for a certification with Microsoft-style question randomization.
     
     Args:
         certification_code: Microsoft certification exam code
         auto_progression: Whether to automatically advance questions
+        randomize_questions: Whether to randomize questions (like Microsoft practice tests)
+        questions_per_session: Number of questions to include in this session
         
     Returns:
-        UserSession object with session details
+        UserSession object with session details and randomized questions
     """
     try:
         certification_code = certification_code.upper()
@@ -48,16 +80,29 @@ async def start_session(
                 detail=f"Practice assessment for {certification_code} not found. Please load the assessment first."
             )
         
-        # Get assessment
-        assessment = assessment_cache[certification_code]
+        # Get original assessment
+        original_assessment = assessment_cache[certification_code]
         
         # Generate unique session ID
         session_id = str(uuid.uuid4())
         
-        # Start session with AI agent
+        # Create randomized assessment if requested (default behavior)
+        if randomize_questions:
+            session_assessment = question_randomizer.randomize_assessment_for_session(
+                assessment=original_assessment,
+                session_id=session_id,
+                questions_per_session=questions_per_session,
+                shuffle_answers=True
+            )
+            logger.info(f"Created randomized assessment for session {session_id} with {len(session_assessment.questions)} questions")
+        else:
+            session_assessment = original_assessment
+            logger.info(f"Using static assessment for session {session_id}")
+        
+        # Start session with AI agent using randomized assessment
         session = await ai_agent.start_session(
             session_id=session_id,
-            assessment=assessment,
+            assessment=session_assessment,
             auto_progression=auto_progression
         )
         
@@ -380,6 +425,35 @@ async def end_session(session_id: str):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to end session: {str(e)}"
+        )
+
+
+@router.get("/{session_id}/randomization-stats")
+async def get_session_randomization_stats(session_id: str):
+    """
+    Get randomization statistics for a specific session.
+    Shows how questions are being rotated similar to Microsoft practice tests.
+    
+    Args:
+        session_id: Session identifier
+        
+    Returns:
+        Dictionary with randomization statistics
+    """
+    try:
+        stats = question_randomizer.get_session_stats(session_id)
+        
+        return {
+            "success": True,
+            "message": "Session randomization statistics retrieved",
+            "data": stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting randomization stats for session {session_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get randomization statistics: {str(e)}"
         )
 
 
