@@ -23,9 +23,7 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: 
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    environment: cert-practice-question-env  # Use the same environment as other workflows
     
     steps:
       - name: Checkout code

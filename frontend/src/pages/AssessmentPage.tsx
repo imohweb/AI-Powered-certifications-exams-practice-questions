@@ -101,12 +101,24 @@ const AssessmentPage = ({
   // Initialize speech recognition with enhanced debugging and auto-restart
   useEffect(() => {
     if (typeof window !== 'undefined' && voiceEnabled) {
+      // Clean up any existing recognition first
+      if (recognitionRef.current) {
+        console.log('🎤 Stopping existing speech recognition for language change');
+        try {
+          recognitionRef.current.stop();
+          recognitionRef.current = null;
+        } catch (error) {
+          console.error('🎤 Error stopping existing recognition:', error);
+        }
+      }
+
+      // Initialize new recognition
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         // Use the selected language for speech recognition
         const recognitionLang = getRecognitionLanguageCode(selectedLanguage);
           
-        console.log(`🎤 Initializing Speech Recognition for ${recognitionLang}...`);
+        console.log(`🎤 Initializing Speech Recognition for ${recognitionLang} (${selectedLanguage.toUpperCase()})...`);
         const recognition = new SpeechRecognition();
         
         // Enhanced configuration
