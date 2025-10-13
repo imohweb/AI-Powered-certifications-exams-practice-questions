@@ -1,7 +1,7 @@
 # AI-Powered Certification Practice Assessments - Voice Assistant
 
-[![Deploy Backend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend.yml)
-[![Deploy Frontend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend.yml)
+[![Deploy Backend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend-webapp.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-backend-webapp.yml)
+[![Deploy Frontend](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend-github-pages.yml/badge.svg)](https://github.com/imohweb/AI-Powered-certifications-exams-practice-questions/actions/workflows/deploy-frontend-github-pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An open-source AI-powered voice assistant application that provides interactive, hands-free learning experiences for cloud certification exams with multilingual text-to-speech capabilities.
@@ -108,6 +108,8 @@ AZURE_SPEECH_KEY=your_speech_service_key
 AZURE_SPEECH_REGION=your_speech_service_region
 AZURE_TRANSLATOR_KEY=your_translator_service_key
 AZURE_TRANSLATOR_REGION=your_translator_service_region
+AZURE_OPENAI_API_KEY=your_openai_service_key
+AZURE_OPENAI_ENDPOINT=your_openai_service_endpoint
 ```
 
 ### Running the Application
@@ -129,7 +131,7 @@ npm start
 ### Production Deployment
 
 The application is designed for production deployment with:
-- **Backend**: Azure Container Apps
+- **Backend**: Azure App Service (Web App)
 - **Frontend**: GitHub Pages
 
 📚 **Deployment Documentation**:
@@ -139,15 +141,15 @@ The application is designed for production deployment with:
 ### Live Application
 
 - **Frontend**: https://imohweb.github.io/AI-Powered-certifications-exams-practice-questions/
-- **Backend**: Deployed on Azure Container Apps
+- **Backend API**: https://backend-ai-practice-questions-app.azurewebsites.net/
 
 ### CI/CD Pipeline
 
 Automated deployment via GitHub Actions:
-- Backend automatically deploys to Azure Container Apps on push to `main`
+- Backend automatically deploys to Azure App Service on push to `main`
 - Frontend automatically deploys to GitHub Pages on push to `main`
-- Docker images versioned with build numbers for easy rollback
-- All secrets managed via GitHub Secrets (no hardcoded credentials)
+- Environment variables and secrets managed via GitHub Secrets and Azure App Service Configuration
+- All credentials secured (no hardcoded secrets)
 
 ## Available Certifications
 
